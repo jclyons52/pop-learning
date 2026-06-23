@@ -65,6 +65,25 @@ python3 -m http.server 8000
 # then open http://localhost:8000/
 ```
 
+## Tests & checks
+
+The app ships with **no build step**, but the shared logic has a safety net
+(Node ≥ 18, no dependencies needed for the first three):
+
+```bash
+npm run syntax     # every inline + shared script parses
+npm test           # unit tests for the plan logic (shared/plan-core.js)
+npm run validate   # game data integrity + plan/cache contract + SW-hash guard
+npm run typecheck  # tsc --noEmit over JSDoc-typed shared modules (needs: npm install)
+npm run check      # all of the above (what CI runs)
+```
+
+`shared/plan-core.js` is **pure logic** (no DOM/storage) so it's unit-testable;
+`shared/plan.js` is the thin browser wrapper around it. After editing any
+precached file, run **`npm run stamp`** to refresh the service-worker asset hash
+(the offline cache name includes it, so caches bust automatically — and
+`validate` fails if you forget). CI runs everything on push (`.github/workflows/ci.yml`).
+
 ## Regenerating the icons
 
 The icons are produced by a small standalone script (Python standard library only):
