@@ -46,6 +46,7 @@
       </div>
     </div>
     <div class="controls">
+      <button class="ctrl" id="slowBtn" aria-pressed="false" aria-label="Slow guided blending">🐢 Slow</button>
       <button class="ctrl" id="shuffleBtn" aria-pressed="false" aria-label="Shuffle order">🔀 Shuffle</button>
       <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
     </div>
@@ -95,7 +96,7 @@
   ];
 
   var order = WORDS.map(function(_,i){ return i; });
-  var pos = 0, shuffled = false;
+  var pos = 0, shuffled = false, slowMode = false;
   var card=$("card"), tilesEl=$("tiles"), reveal=$("reveal"),
       emoji=$("emoji"), word=$("word"), counter=$("counter"), bar=$("bar"), rail=$("rail");
 
@@ -142,16 +143,22 @@
   }
 
   function blend(){
-    var w = current(), letters = w[0].split("");
+    var w = current(), word = w[0], letters = word.split("");
     var tiles = Array.prototype.slice.call(tilesEl.children);
-    // audio: each sound with a gap, then the whole word
-    var seq = letters.map(function(ch, i){
-      return { text: SOUNDS[ch] || ch, gap: i < letters.length-1 ? 260 : 420 };
-    });
-    seq.push({ text: w[0], rate: 0.9 });
+    var seq, step;
+    if(slowMode){
+      // guided "successive" blending: each sound, then build it up (c, ca, cat)
+      step = 560;
+      seq = letters.map(function(ch){ return { text: SOUNDS[ch] || ch, rate: 0.8, gap: 480 }; });
+      for(var i = 2; i <= letters.length; i++){ seq.push({ text: word.slice(0, i), rate: 0.78, gap: 320 }); }
+      seq.push({ text: word, rate: 0.85 });
+    } else {
+      step = 360;
+      seq = letters.map(function(ch, i){ return { text: SOUNDS[ch] || ch, gap: i < letters.length-1 ? 260 : 420 }; });
+      seq.push({ text: word, rate: 0.9 });
+    }
     Pop.speakSeq(seq);
     // visual: light each tile in time, then reveal
-    var step = 360;
     tiles.forEach(function(t, i){ setTimeout(function(){ lit(t); }, i*step); });
     setTimeout(function(){
       reveal.classList.add("show");
@@ -165,6 +172,11 @@
   $("blendBtn").addEventListener("click", blend);
   $("prevBtn").addEventListener("click", function(){ go(-1); });
   $("nextBtn").addEventListener("click", function(){ go(1); });
+
+  $("slowBtn").addEventListener("click", function(){
+    slowMode = !slowMode;
+    this.setAttribute("aria-pressed", String(slowMode));
+  });
 
   $("shuffleBtn").addEventListener("click", function(){
     shuffled = !shuffled;
