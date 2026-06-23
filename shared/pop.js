@@ -48,20 +48,53 @@
   }
   function getSound() { return soundOn; }
 
-  /* ---------- speech ---------- */
+  /* ---------- speech & voice selection ---------- */
   var voice = null;
+  var savedVoiceName = null;
+  try { savedVoiceName = localStorage.getItem("pop-voice"); } catch (e) {}
+
+  // Apple "novelty" voices we never want to default to.
+  var SILLY = /^(albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|junior|organ|pipe organ|ralph|fred|superstar|trinoids|whisper|wobble|zarvox|wishing well)/i;
+
+  function scoreVoice(v) {
+    var s = 0, n = v.name || "", lang = v.lang || "";
+    if (/en[-_]AU/i.test(lang)) s += 50;
+    else if (/en[-_]GB/i.test(lang)) s += 42;
+    else if (/en[-_]NZ/i.test(lang)) s += 30;
+    else if (/en[-_]IE/i.test(lang)) s += 24;
+    else if (/^en/i.test(lang)) s += 12;
+    if (/premium/i.test(n)) s += 60;
+    if (/enhanced/i.test(n)) s += 52;
+    if (/neural|natural/i.test(n)) s += 52;
+    if (/siri/i.test(n)) s += 46;
+    if (/google/i.test(n)) s += 40;
+    if (/microsoft/i.test(n)) s += 22;
+    if (SILLY.test(n)) s -= 200;
+    return s;
+  }
+
+  function englishVoices() {
+    if (!("speechSynthesis" in window)) return [];
+    var vs = speechSynthesis.getVoices().filter(function (v) { return /^en/i.test(v.lang); });
+    return vs.sort(function (a, b) { return scoreVoice(b) - scoreVoice(a); });
+  }
+
   function pickVoice() {
     if (!("speechSynthesis" in window)) return;
     var vs = speechSynthesis.getVoices();
-    voice = vs.find(function (v) { return /en[-_]AU/i.test(v.lang); })
-         || vs.find(function (v) { return /en[-_]GB/i.test(v.lang); })
-         || vs.find(function (v) { return /^en/i.test(v.lang); })
-         || vs[0] || null;
+    var byName = savedVoiceName && vs.filter(function (v) { return v.name === savedVoiceName; })[0];
+    voice = byName || englishVoices()[0] || vs[0] || null;
   }
   if ("speechSynthesis" in window) {
     pickVoice();
-    speechSynthesis.onvoiceschanged = pickVoice;
+    speechSynthesis.onvoiceschanged = function () { pickVoice(); if (voiceListEl) renderVoiceList(); };
   }
+  function setVoiceName(name) {
+    savedVoiceName = name;
+    try { localStorage.setItem("pop-voice", name); } catch (e) {}
+    pickVoice();
+  }
+  function currentVoiceName() { return voice ? voice.name : null; }
   function cancel() { if ("speechSynthesis" in window) speechSynthesis.cancel(); }
 
   function utter(text, opts) {
@@ -77,6 +110,13 @@
     if (!soundOn || !("speechSynthesis" in window) || !text) return;
     cancel();
     speechSynthesis.speak(utter(text, opts));
+  }
+  /* Play a sample of the current voice — bypasses the mute toggle so it
+     can always be previewed from the voice picker. */
+  function sampleVoice() {
+    if (!("speechSynthesis" in window)) return;
+    cancel();
+    speechSynthesis.speak(utter("Hi! I'm your reading helper. The cat sat on the mat.", { rate: 0.9 }));
   }
   /* Speak a list of parts in order, with optional gaps — used for blending.
      parts: [{ text, rate, pitch, gap }]   (gap = ms pause after the part) */
@@ -160,11 +200,82 @@
   }
   wirePWA();
 
+  /* ---------- voice picker UI (shared across every app) ---------- */
+  var voiceListEl = null, modalEl = null;
+
+  function renderVoiceList() {
+    if (!voiceListEl) return;
+    var list = englishVoices(), cur = currentVoiceName();
+    voiceListEl.innerHTML = "";
+    if (!list.length) {
+      voiceListEl.appendChild(el("p", { "class": "pop-modal-hint", text: "No voices found on this device yet." }));
+      return;
+    }
+    list.forEach(function (v) {
+      var row = el("button", { "class": "pop-voice-row" + (v.name === cur ? " sel" : "") });
+      var tag = (v.lang || "") + (v.localService ? " · offline" : " · online");
+      row.innerHTML = "<span>" + v.name + "</span><small>" + tag + "</small>";
+      row.addEventListener("click", function () {
+        setVoiceName(v.name);
+        renderVoiceList();
+        sampleVoice();
+      });
+      voiceListEl.appendChild(row);
+    });
+  }
+
+  function closeVoiceModal() {
+    cancel();
+    if (modalEl) { modalEl.remove(); modalEl = null; voiceListEl = null; }
+  }
+
+  function openVoiceModal() {
+    closeVoiceModal();
+    modalEl = el("div", { "class": "pop-modal-backdrop" });
+    var modal = el("div", { "class": "pop-modal", role: "dialog", "aria-label": "Choose a voice", "aria-modal": "true" });
+    modal.appendChild(el("h2", { text: "🗣 Choose a voice" }));
+    modal.appendChild(el("p", { "class": "pop-modal-hint", text: "Tap a voice to hear it — your choice is saved for every game." }));
+    voiceListEl = el("div", { "class": "pop-voice-list" });
+    modal.appendChild(voiceListEl);
+    modal.appendChild(el("p", { "class": "pop-modal-tip",
+      html: "Tip: on iPhone &amp; Mac, download an <b>Enhanced</b> or <b>Premium</b> voice in Settings → Accessibility → Spoken Content — it'll then appear here and sound far more natural." }));
+    var done = el("button", { "class": "pop-modal-done", text: "Done" });
+    done.addEventListener("click", closeVoiceModal);
+    modal.appendChild(done);
+    modalEl.appendChild(modal);
+    modalEl.addEventListener("click", function (e) { if (e.target === modalEl) closeVoiceModal(); });
+    document.addEventListener("keydown", function esc(e) {
+      if (e.key === "Escape") { closeVoiceModal(); document.removeEventListener("keydown", esc); }
+    });
+    document.body.appendChild(modalEl);
+    renderVoiceList();
+  }
+
+  function injectVoiceButton() {
+    if (document.getElementById("popVoiceBtn")) return;
+    var controls = document.querySelector(".controls"), btn;
+    if (controls) {
+      btn = el("button", { "class": "ctrl", id: "popVoiceBtn", "aria-label": "Choose a voice", text: "🗣 Voice" });
+      controls.appendChild(btn);
+    } else {
+      var row = document.querySelector(".installRow");
+      if (!row) return;
+      btn = el("button", { "class": "install", id: "popVoiceBtn", "aria-label": "Choose a voice", text: "🗣 Choose a voice" });
+      btn.style.display = "inline-flex";
+      row.appendChild(btn);
+    }
+    btn.addEventListener("click", openVoiceModal);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", injectVoiceButton);
+  else injectVoiceButton();
+
   global.Pop = {
     ROOT: ROOT,
     $: $, el: el, shuffle: shuffle,
     COLORS: COLORS, color: color,
     speak: speak, speakSeq: speakSeq, cancel: cancel,
+    sampleVoice: sampleVoice, englishVoices: englishVoices,
+    setVoiceName: setVoiceName, currentVoiceName: currentVoiceName, openVoiceModal: openVoiceModal,
     setSound: setSound, getSound: getSound,
     sparkle: sparkle, onArrows: onArrows
   };

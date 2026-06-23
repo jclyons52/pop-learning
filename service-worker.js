@@ -2,7 +2,7 @@
    Precaches the whole suite so it runs offline once installed. */
 "use strict";
 
-var VERSION = "pop-v1";
+var VERSION = "pop-v2";
 var CACHE = "pop-cache-" + VERSION;
 
 // All paths are relative to this script (the repo root).

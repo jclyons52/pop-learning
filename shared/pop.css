@@ -230,6 +230,49 @@ body{
   100%{ transform:translate(var(--dx), -120px) scale(1.2) rotate(var(--rot)); opacity:0; }
 }
 
+/* ---------- voice picker modal ---------- */
+.pop-modal-backdrop{
+  position:fixed; inset:0; z-index:100;
+  background:rgba(43,36,64,.45);
+  display:flex; align-items:flex-end; justify-content:center;
+}
+.pop-modal{
+  background:var(--paper); color:var(--ink);
+  width:min(560px,100%); max-height:82vh;
+  border-radius:26px 26px 0 0;
+  padding:20px 18px calc(18px + env(safe-area-inset-bottom));
+  box-shadow:0 -10px 40px rgba(43,36,64,.3);
+  display:flex; flex-direction:column; gap:10px;
+  animation:sheet .22s ease;
+}
+@keyframes sheet{ from{ transform:translateY(40px); opacity:.6; } to{ transform:none; opacity:1; } }
+@media (min-width:560px){
+  .pop-modal-backdrop{ align-items:center; padding:20px; }
+  .pop-modal{ border-radius:26px; }
+}
+.pop-modal h2{ margin:0; font-size:1.3rem; font-weight:700; }
+.pop-modal-hint{ margin:0; color:var(--ink-soft); font-size:.85rem; font-weight:500; }
+.pop-voice-list{ overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding:2px; -webkit-overflow-scrolling:touch; }
+.pop-voice-row{
+  border:none; text-align:left; cursor:pointer;
+  background:#fff; color:var(--ink); font-family:var(--font); font-weight:600; font-size:.95rem;
+  border-radius:14px; padding:11px 14px;
+  box-shadow:0 2px 0 var(--shadow);
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+}
+.pop-voice-row small{ color:var(--ink-soft); font-weight:500; font-size:.72rem; white-space:nowrap; }
+.pop-voice-row.sel{ background:var(--pop); color:#fff; box-shadow:0 2px 0 #C23B3B; }
+.pop-voice-row.sel small{ color:rgba(255,255,255,.85); }
+.pop-voice-row:focus-visible{ outline:3px solid #4DABF7; outline-offset:2px; }
+.pop-modal-tip{ margin:0; font-size:.78rem; color:var(--ink-soft); line-height:1.35; }
+.pop-modal-done{
+  border:none; cursor:pointer;
+  background:var(--ink); color:#fff; font-family:var(--font); font-weight:700; font-size:1rem;
+  border-radius:999px; padding:13px;
+  box-shadow:0 4px 0 rgba(0,0,0,.25);
+}
+.pop-modal-done:active{ transform:translateY(4px); box-shadow:0 0 0 rgba(0,0,0,.25); }
+
 @media (prefers-reduced-motion: reduce){
   *{ transition:none !important; animation:none !important; }
 }
