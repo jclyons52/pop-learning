@@ -239,8 +239,7 @@
     streakValue: streakValue, bumpStreak: bumpStreak, stageInfoFor: stageInfoFor
   };
 
-  var root = typeof globalThis !== "undefined" ? globalThis : this;
-  /** @type {any} */ (root).PopPlanCore = api;
+  /** @type {any} */ (globalThis).PopPlanCore = api;
   // @ts-ignore - CommonJS export for Node tests (module is undefined in the browser)
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })();
