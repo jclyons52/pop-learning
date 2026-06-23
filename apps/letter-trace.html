@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Letter Trace · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  /* the trace card holds a guide letter + a drawing canvas */
+  #card{
+    aspect-ratio:1/1;
+    width:min(82vw, 380px);
+    padding:0; overflow:hidden; cursor:crosshair;
+    touch-action:none;
+  }
+  #pad{
+    width:100%; height:100%;
+    display:block; border-radius:38px;
+    touch-action:none;
+  }
+  .label .word{ text-transform:lowercase; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Letter&nbsp;<span>Trace</span></h1>
+        <p>Trace the letter with your finger</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="caseBtn" aria-label="Change letter case">a</button>
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="card" id="card" aria-label="Tracing area">
+      <canvas id="pad"></canvas>
+    </div>
+
+    <div class="label">
+      <span class="emoji" id="emoji">🍎</span>
+      <span class="word" id="word">apple</span>
+    </div>
+
+    <div class="nav">
+      <button class="arrow" id="prevBtn" aria-label="Previous letter">←</button>
+      <button class="say" id="clearBtn" aria-label="Clear the drawing" style="background:#fff;box-shadow:0 6px 0 var(--shadow);">↺ Clear</button>
+      <button class="say" id="soundLetterBtn" aria-label="Hear the letter sound">🔊 Sound</button>
+      <button class="say" id="doneBtn" aria-label="Done tracing" style="background:#37B24D;color:#fff;box-shadow:0 6px 0 #2B8A3E;">✓ Done</button>
+      <button class="arrow" id="nextBtn" aria-label="Next letter">→</button>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="counter" id="counter">1 / 26</div>
+    <div class="progress"><i id="bar"></i></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script src="../shared/data.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+
+  var LETTERS = Pop.data.letters;
+  var SOUNDS = Pop.data.sounds;
+  var pos = 0, lower = true;
+
+  var card=$("card"), pad=$("pad"), emoji=$("emoji"), word=$("word"),
+      counter=$("counter"), bar=$("bar");
+  var ctx = pad.getContext("2d");
+  var dpr = Math.max(1, window.devicePixelRatio || 1);
+  var W = 0, H = 0;            // CSS pixel size of the canvas
+  var drawing = false, lastX = 0, lastY = 0;
+
+  function current(){ return LETTERS[pos]; }
+  function guideChar(){ var c = current()[0]; return lower ? c.toLowerCase() : c; }
+  function inkColour(){ return Pop.color(pos)[0]; }
+
+  function sizeCanvas(){
+    var r = pad.getBoundingClientRect();
+    W = r.width; H = r.height;
+    pad.width = Math.round(W * dpr);
+    pad.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    drawGuide();
+  }
+
+  function drawGuide(){
+    ctx.clearRect(0, 0, W, H);
+    // faint guide letter behind the drawing
+    ctx.save();
+    ctx.fillStyle = "rgba(43,36,64,0.12)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    var size = Math.floor(Math.min(W, H) * 0.74);
+    ctx.font = "700 " + size + "px Fredoka, ui-rounded, system-ui, sans-serif";
+    ctx.fillText(guideChar(), W/2, H/2 + size*0.04);
+    ctx.restore();
+  }
+
+  function clearPad(){ drawGuide(); }
+
+  function pointFrom(e){
+    var r = pad.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  function start(e){
+    drawing = true;
+    if(pad.setPointerCapture && e.pointerId != null){
+      try { pad.setPointerCapture(e.pointerId); } catch(err){}
+    }
+    var p = pointFrom(e);
+    lastX = p.x; lastY = p.y;
+    // a dot so a tap leaves a mark
+    ctx.fillStyle = inkColour();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 7, 0, Math.PI*2);
+    ctx.fill();
+    e.preventDefault();
+  }
+
+  function move(e){
+    if(!drawing) return;
+    var p = pointFrom(e);
+    ctx.strokeStyle = inkColour();
+    ctx.lineWidth = 14;
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    lastX = p.x; lastY = p.y;
+    e.preventDefault();
+  }
+
+  function end(e){
+    if(!drawing) return;
+    drawing = false;
+    if(pad.releasePointerCapture && e && e.pointerId != null){
+      try { pad.releasePointerCapture(e.pointerId); } catch(err){}
+    }
+  }
+
+  pad.addEventListener("pointerdown", start);
+  pad.addEventListener("pointermove", move);
+  pad.addEventListener("pointerup", end);
+  pad.addEventListener("pointercancel", end);
+  pad.addEventListener("pointerleave", end);
+
+  function sayLetter(){
+    var L = current();
+    var snd = SOUNDS[L[0].toLowerCase()];
+    if(snd) Pop.speak(snd + ". " + L[0] + " for " + L[1] + ".");
+    else Pop.speak(L[0] + " for " + L[1] + ".");
+  }
+
+  function render(animate){
+    var L = current(), col = Pop.color(pos);
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+    emoji.textContent = L[2];
+    word.textContent = L[1];
+    counter.textContent = (pos+1) + " / " + LETTERS.length;
+    bar.style.width = ((pos+1)/LETTERS.length*100) + "%";
+    sizeCanvas();
+    if(animate){ card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop"); }
+  }
+
+  function go(dir){
+    pos = (pos + dir + LETTERS.length) % LETTERS.length;
+    render(true);
+    sayLetter();
+  }
+
+  function done(){
+    Pop.sparkle(card);
+    Pop.progress.record("trace", current()[0], true);
+    var praise = ["Beautiful tracing!","Well done!","Great job!","You did it!"];
+    Pop.speak(praise[Math.floor(Math.random()*praise.length)]);
+    setTimeout(function(){ go(1); }, 900);
+  }
+
+  $("prevBtn").addEventListener("click", function(){ go(-1); });
+  $("nextBtn").addEventListener("click", function(){ go(1); });
+  $("clearBtn").addEventListener("click", clearPad);
+  $("soundLetterBtn").addEventListener("click", sayLetter);
+  $("doneBtn").addEventListener("click", done);
+
+  $("caseBtn").addEventListener("click", function(){
+    lower = !lower;
+    this.textContent = lower ? "a" : "A";
+    drawGuide();
+  });
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  window.addEventListener("resize", function(){ sizeCanvas(); });
+  Pop.onArrows(function(){ go(-1); }, function(){ go(1); }, sayLetter);
+
+  render(false);
+  sayLetter();
+})();
+</script>
+</body>
+</html>
