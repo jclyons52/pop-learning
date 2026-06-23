@@ -148,6 +148,54 @@
       <div class="stat"><span class="num" id="sumStickers">0</span><span class="lbl">Stickers earned</span></div>
     </section>
 
+    <!-- daily learning plan -->
+    <style>
+      .stage-row{ display:flex; gap:14px; flex-wrap:wrap; margin-top:6px; }
+      .stage-block{ flex:1 1 200px; background:var(--paper); border-radius:18px; padding:12px 14px; box-shadow:0 2px 0 var(--shadow); }
+      .stage-label{ display:block; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin-bottom:8px; }
+      .stage-ctl{ display:flex; align-items:center; gap:10px; }
+      .stage-name{ flex:1; font-weight:700; font-size:1rem; text-align:center; }
+      .stepper{ border:none; cursor:pointer; width:38px; height:38px; border-radius:12px; background:#fff; color:var(--ink);
+        font-family:var(--font); font-weight:700; font-size:1.3rem; box-shadow:0 2px 0 var(--shadow); }
+      .stepper:active{ transform:translateY(2px); box-shadow:0 0 0 var(--shadow); }
+      .stage-mode{ display:block; margin-top:8px; font-size:.74rem; font-weight:600; color:var(--ink-soft); text-align:center; }
+      .stage-foot{ display:flex; align-items:center; gap:12px; margin-top:13px; flex-wrap:wrap; }
+      .streak-chip{ font-weight:700; font-size:.9rem; background:#FFF3BF; border-radius:999px; padding:6px 12px; }
+      .auto-btn{ border:none; cursor:pointer; font-family:var(--font); font-weight:600; font-size:.85rem; color:var(--ink);
+        background:#fff; border-radius:999px; padding:8px 14px; box-shadow:0 2px 0 var(--shadow); }
+      .auto-btn:active{ transform:translateY(2px); box-shadow:0 0 0 var(--shadow); }
+      .sub.small{ font-size:.8rem; margin-top:10px; }
+    </style>
+    <section class="panel" id="planPanel">
+      <h2>🌅 The daily plan</h2>
+      <p class="sub">On the home screen, tap <b>Today's Plan</b> — about <b>10 minutes, once a day</b>: a warm-up, two focus games and a number game, chosen to suit where she's at. Little and often is what makes it stick — stop while it's still fun.</p>
+      <div class="stage-row">
+        <div class="stage-block">
+          <span class="stage-label">📖 Reading stage</span>
+          <div class="stage-ctl">
+            <button class="stepper" id="rDown" aria-label="Lower reading stage">−</button>
+            <span class="stage-name" id="rStage">—</span>
+            <button class="stepper" id="rUp" aria-label="Raise reading stage">+</button>
+          </div>
+          <span class="stage-mode" id="rMode"></span>
+        </div>
+        <div class="stage-block">
+          <span class="stage-label">🔢 Numbers stage</span>
+          <div class="stage-ctl">
+            <button class="stepper" id="nDown" aria-label="Lower numbers stage">−</button>
+            <span class="stage-name" id="nStage">—</span>
+            <button class="stepper" id="nUp" aria-label="Raise numbers stage">+</button>
+          </div>
+          <span class="stage-mode" id="nMode"></span>
+        </div>
+      </div>
+      <div class="stage-foot">
+        <span class="streak-chip" id="pStreak"></span>
+        <button class="auto-btn" id="autoBtn" hidden>↺ Back to auto</button>
+      </div>
+      <p class="sub small">Stages advance automatically as she shows she's ready. Nudge them with − / + if you'd like; tap <b>Back to auto</b> to hand pacing back to the app.</p>
+    </section>
+
     <!-- 2) sticker shelf -->
     <section class="panel">
       <h2>🏅 Sticker shelf</h2>
@@ -201,6 +249,7 @@
 
 <script src="shared/pop.js"></script>
 <script src="shared/data.js"></script>
+<script src="shared/plan.js"></script>
 <script>
 (function(){
   "use strict";
@@ -322,6 +371,34 @@
     Pop.progress.reset();
     location.reload();
   });
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  if(!window.Pop || !Pop.plan){ var pp=document.getElementById("planPanel"); if(pp) pp.style.display="none"; return; }
+  var $ = function(id){ return document.getElementById(id); };
+  function refresh(){
+    var info = Pop.plan.stageInfo();
+    $("rStage").textContent = (info.reading.index+1) + ". " + info.reading.name;
+    $("nStage").textContent = (info.numbers.index+1) + ". " + info.numbers.name;
+    $("rMode").textContent = info.reading.auto ? "advancing automatically" : "set by you";
+    $("nMode").textContent = info.numbers.auto ? "advancing automatically" : "set by you";
+    $("autoBtn").hidden = info.reading.auto && info.numbers.auto;
+    var s = Pop.plan.streak();
+    $("pStreak").textContent = s > 0 ? ("🔥 " + s + (s===1 ? " day" : " day streak")) : "No streak yet — finish a plan to start one";
+  }
+  function nudge(track, delta){
+    var info = Pop.plan.stageInfo()[track];
+    var i = Math.max(0, Math.min(info.index + delta, info.count - 1));
+    Pop.plan.setStage(track, i); refresh();
+  }
+  $("rUp").addEventListener("click", function(){ nudge("reading", 1); });
+  $("rDown").addEventListener("click", function(){ nudge("reading", -1); });
+  $("nUp").addEventListener("click", function(){ nudge("numbers", 1); });
+  $("nDown").addEventListener("click", function(){ nudge("numbers", -1); });
+  $("autoBtn").addEventListener("click", function(){ Pop.plan.setStage("reading", null); Pop.plan.setStage("numbers", null); refresh(); });
+  refresh();
 })();
 </script>
 </body>
