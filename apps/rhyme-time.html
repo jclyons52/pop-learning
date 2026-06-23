@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Rhyme Time · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  /* prompt card: the target word + a picture clue + a big replay button */
+  #card{ aspect-ratio:1/0.78; gap:6px; }
+  .prompt-emoji{ font-size:clamp(3rem,15vw,5.2rem); line-height:1; }
+  .prompt-word{
+    font-size:clamp(1.6rem,8vw,2.6rem); font-weight:700; color:#fff;
+    text-transform:lowercase; line-height:1; margin-top:2px;
+    text-shadow:0 2px 0 rgba(0,0,0,.18);
+  }
+  .prompt-say{
+    margin-top:6px; border:none; cursor:pointer;
+    background:rgba(255,255,255,.92); color:var(--ink);
+    font-family:var(--font); font-weight:700; font-size:clamp(.95rem,4vw,1.2rem);
+    border-radius:999px; padding:9px 18px; box-shadow:0 4px 0 rgba(0,0,0,.14);
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .prompt-say:active{ transform:translateY(4px); box-shadow:0 0 0 rgba(0,0,0,.14); }
+
+  /* word tiles are wider than letter tiles */
+  .choices{
+    display:grid; grid-template-columns:1fr;
+    gap:clamp(8px,3vw,16px);
+    width:min(86vw, 420px);
+  }
+  .choice{
+    border:none; cursor:pointer;
+    border-radius:22px;
+    background:#fff; color:var(--ink);
+    font-family:var(--font); font-weight:700; text-transform:lowercase;
+    font-size:clamp(1.6rem,8vw,2.4rem); line-height:1;
+    padding:clamp(14px,4vw,20px);
+    display:flex; align-items:center; justify-content:center; gap:12px;
+    box-shadow:0 7px 0 var(--shadow);
+    transition:transform .1s ease, box-shadow .1s ease, background .15s ease;
+  }
+  .choice .ce{ font-size:1.1em; line-height:1; }
+  .choice:active{ transform:translateY(5px); box-shadow:0 2px 0 var(--shadow); }
+  .choice:focus-visible{ outline:3px solid #4DABF7; outline-offset:2px; }
+  .choice.correct{ background:#37B24D; color:#fff; box-shadow:0 7px 0 #2B8A3E; animation:pop .42s cubic-bezier(.34,1.56,.64,1); }
+  .choice.wrong{ background:#FA5252; color:#fff; box-shadow:0 7px 0 #D23B3B; animation:shake .4s; }
+  .choice.dim{ opacity:.35; pointer-events:none; }
+  @keyframes shake{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-7px); } 40%{ transform:translateX(7px); } 60%{ transform:translateX(-5px); } 80%{ transform:translateX(5px); } }
+
+  .scorebar{ display:flex; align-items:center; gap:16px; font-weight:600; }
+  .score{ font-size:1rem; color:var(--ink); }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Rhyme&nbsp;<span>Time</span></h1>
+        <p>Find the word that rhymes</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <button class="card" id="card" aria-label="Hear the word again">
+      <span class="prompt-emoji" id="promptEmoji">🐱</span>
+      <span class="prompt-word" id="promptWord">cat</span>
+      <span class="prompt-say">🔊 Listen again</span>
+    </button>
+    <div class="choices" id="choices" aria-label="Tap the word that rhymes"></div>
+    <div class="tap-hint" id="hint">👆 which word rhymes?</div>
+  </main>
+
+  <footer class="bottom">
+    <div class="scorebar">
+      <span class="score" id="score">⭐ 0</span>
+      <span class="counter" id="counter">1 / 1</span>
+    </div>
+    <div class="progress"><i id="bar"></i></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script src="../shared/data.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+
+  var FAMILIES = Pop.data.families;  // [{rime, words:[[onset,word,emoji],...]}, ...]
+  var ROUNDS = 12;
+
+  var pos = 0, score = 0, locked = false;
+  var current = null;  // { target:[onset,word,emoji], rime, answer:[..], options:[..] }
+  var card=$("card"), promptEmoji=$("promptEmoji"), promptWord=$("promptWord"),
+      choicesEl=$("choices"), hint=$("hint"), scoreEl=$("score"),
+      counter=$("counter"), bar=$("bar");
+
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  function buildRound(){
+    // pick a target family with at least 2 words so a rhyming partner exists
+    var famIdx = Math.floor(Math.random()*FAMILIES.length);
+    var fam = FAMILIES[famIdx];
+    var words = Pop.shuffle(fam.words);
+    var target = words[0];          // the prompt word
+    var answer = words[1];          // a different word in the SAME family (rhymes)
+
+    // two distractors from OTHER families
+    var otherFams = Pop.shuffle(FAMILIES.filter(function(_,i){ return i !== famIdx; }));
+    var distractors = [
+      pick(otherFams[0].words),
+      pick(otherFams[1].words)
+    ];
+
+    var options = Pop.shuffle([answer].concat(distractors));
+    current = { target: target, rime: fam.rime, answer: answer, options: options };
+  }
+
+  function speakPrompt(){
+    Pop.speak("Which word rhymes with " + current.target[1] + "?");
+  }
+
+  function newRound(){
+    locked = false;
+    buildRound();
+    var col = Pop.color(pos);  // colour varies per round
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+    promptEmoji.textContent = current.target[2];
+    promptWord.textContent = current.target[1];
+
+    choicesEl.innerHTML = "";
+    current.options.forEach(function(opt){
+      var word = opt[1], emoji = opt[2];
+      var b = Pop.el("button", { "class":"choice", "aria-label": word });
+      b.appendChild(Pop.el("span", { "class":"ce", text: emoji }));
+      b.appendChild(Pop.el("span", { text: word }));
+      b.addEventListener("click", function(){ choose(b, opt); });
+      choicesEl.appendChild(b);
+    });
+
+    hint.textContent = "👆 which word rhymes?";
+    counter.textContent = (pos+1) + " / " + ROUNDS;
+    bar.style.width = ((pos+1)/ROUNDS*100) + "%";
+    setTimeout(speakPrompt, 250);
+  }
+
+  function choose(btn, opt){
+    if(locked) return;
+    var choiceWord = opt[1], targetWord = current.target[1];
+    var correct = (opt === current.answer);
+    // tapping a choice always speaks that word
+    Pop.speak(choiceWord);
+    Pop.progress.record("rhyme", current.rime, correct);
+    if(correct){
+      locked = true;
+      btn.classList.add("correct");
+      Pop.sparkle(card);
+      score++; scoreEl.textContent = "⭐ " + score;
+      setTimeout(function(){
+        Pop.speak("Yes! " + choiceWord + " rhymes with " + targetWord + "!");
+      }, 650);
+      setTimeout(next, 1500);
+    } else {
+      btn.classList.add("wrong", "dim");
+      hint.textContent = "Not quite — listen again and try!";
+      setTimeout(function(){ Pop.speak("Try again."); }, 600);
+      setTimeout(function(){ btn.classList.remove("wrong"); }, 420);
+    }
+  }
+
+  function next(){
+    pos++;
+    if(pos >= ROUNDS){
+      Pop.sparkle(card);
+      Pop.speak("Great job! You found them all!");
+      pos = 0;
+    }
+    newRound();
+  }
+
+  card.addEventListener("click", speakPrompt);
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  newRound();
+})();
+</script>
+</body>
+</html>
