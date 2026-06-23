@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Blend It · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  .glyph{
+    color:#fff; text-shadow:0 5px 0 rgba(0,0,0,.14); line-height:.9;
+    font-size:clamp(5rem, 26vw, 9.5rem); font-weight:700; text-transform:lowercase;
+  }
+  .label .word{ text-transform:lowercase; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Blend&nbsp;<span>It</span></h1>
+        <p>Two sounds, blended</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="shuffleBtn" aria-pressed="false" aria-label="Shuffle order">🔀 Shuffle</button>
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <button class="card" id="card" aria-label="Blend card. Tap to hear.">
+      <div class="glyph" id="glyph">bl</div>
+      <div class="label">
+        <span class="emoji" id="emoji">🧱</span>
+        <span class="word" id="word">block</span>
+      </div>
+    </button>
+    <div class="tap-hint">👆 tap the block to listen</div>
+
+    <div class="nav">
+      <button class="arrow" id="prevBtn" aria-label="Previous blend">←</button>
+      <button class="say" id="sayBtn" aria-label="Say the blend">🔊 Say it</button>
+      <button class="arrow" id="nextBtn" aria-label="Next blend">→</button>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="counter" id="counter">1 / 16</div>
+    <div class="progress"><i id="bar"></i></div>
+    <div class="rail" id="rail" aria-label="Jump to a blend"></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script src="../shared/data.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+
+  var ITEMS = Pop.data.blends;
+
+  var order = ITEMS.map(function(_,i){ return i; });
+  var pos = 0, shuffled = false;
+
+  var card=$("card"), glyph=$("glyph"), emoji=$("emoji"), word=$("word"),
+      counter=$("counter"), bar=$("bar"), rail=$("rail");
+
+  ITEMS.forEach(function(it, idx){
+    var b = Pop.el("button", { text: it[0], "aria-label": "Go to blend " + it[0] });
+    b.addEventListener("click", function(){ pos = order.indexOf(idx); render(true); sayCurrent(); });
+    rail.appendChild(b);
+  });
+  var railBtns = Array.prototype.slice.call(rail.children);
+
+  function current(){ return ITEMS[ order[pos] ]; }
+
+  function render(animate){
+    var B = current(), col = Pop.color(order[pos]);
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+    glyph.textContent = B[0];
+    emoji.textContent = B[2];
+    word.textContent = B[1];
+    counter.textContent = (pos+1) + " / " + ITEMS.length;
+    bar.style.width = ((pos+1)/ITEMS.length*100) + "%";
+    railBtns.forEach(function(b,i){
+      var on = (i === order[pos]);
+      b.classList.toggle("active", on);
+      b.style.background = on ? col[0] : "#fff";
+    });
+    if(animate){ card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop"); }
+  }
+
+  function sayCurrent(){ var B = current(); Pop.speak(B[0] + ". " + B[1] + "."); }
+  function go(dir){ pos = (pos + dir + ITEMS.length) % ITEMS.length; render(true); sayCurrent(); }
+
+  card.addEventListener("click", function(){
+    card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
+    Pop.sparkle(card); sayCurrent();
+  });
+  $("prevBtn").addEventListener("click", function(){ go(-1); });
+  $("nextBtn").addEventListener("click", function(){ go(1); });
+  $("sayBtn").addEventListener("click", function(){ Pop.sparkle(card); sayCurrent(); });
+
+  $("shuffleBtn").addEventListener("click", function(){
+    shuffled = !shuffled;
+    this.setAttribute("aria-pressed", String(shuffled));
+    var currentIdx = order[pos];
+    if(shuffled){
+      order = Pop.shuffle(order);
+      if(order[0] === currentIdx && order.length>1){ var t=order[0]; order[0]=order[1]; order[1]=t; }
+      pos = 0; render(true); sayCurrent();
+    }else{
+      order = ITEMS.map(function(_,i){ return i; });
+      pos = order.indexOf(currentIdx); render(true);
+    }
+  });
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  Pop.onArrows(function(){go(-1);}, function(){go(1);}, function(){ Pop.sparkle(card); sayCurrent(); });
+  render(false);
+})();
+</script>
+</body>
+</html>

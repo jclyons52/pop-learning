@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Magic e · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  .tiles{ display:flex; gap:clamp(8px,2.5vw,14px); justify-content:center; align-items:center; }
+  .tile{
+    border:none; cursor:pointer;
+    width:clamp(58px,19vw,92px); aspect-ratio:1/1.1;
+    border-radius:20px; background:#fff; color:var(--ink);
+    font-family:var(--font); font-weight:700;
+    font-size:clamp(2.4rem,11vw,4rem); line-height:1;
+    display:grid; place-items:center;
+    box-shadow:0 7px 0 rgba(0,0,0,.16);
+    text-transform:lowercase;
+    transition:transform .1s ease, box-shadow .1s ease, background .15s ease, color .15s ease, opacity .25s ease;
+  }
+  .tile:active,.tile.lit{ transform:translateY(6px); box-shadow:0 1px 0 rgba(0,0,0,.16); }
+  .tile.lit{ background:#FFD43B; }
+  .tile.vowel.lit{ background:#FFD43B; }
+  /* the silent magic-e tile, greyed until added */
+  .tile.magic{
+    background:#EFE3CE; color:var(--ink-soft);
+    opacity:.45;
+  }
+  .tile.magic.added{
+    background:#fff; color:var(--pop);
+    opacity:1;
+    animation:popIn .42s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn{
+    0%{ transform:scale(.2) rotate(-12deg); opacity:0; }
+    60%{ transform:scale(1.12) rotate(4deg); opacity:1; }
+    100%{ transform:scale(1) rotate(0); opacity:1; }
+  }
+  .reveal{
+    margin-top:clamp(10px,3vh,22px);
+    display:flex; align-items:center; gap:12px;
+    opacity:0; transform:translateY(8px) scale(.9);
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  .reveal.show{ opacity:1; transform:none; }
+  .reveal .emoji{ font-size:clamp(2.4rem,11vw,3.6rem); }
+  .reveal .word{
+    background:var(--label); color:var(--ink);
+    border-radius:18px; padding:6px 16px;
+    font-size:clamp(1.3rem,6vw,2rem); font-weight:700; text-transform:lowercase;
+    box-shadow:0 5px 0 rgba(0,0,0,.10);
+  }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Magic&nbsp;<span>e</span></h1>
+        <p>Silent e makes the vowel say its name</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="shuffleBtn" aria-pressed="false" aria-label="Shuffle order">🔀 Shuffle</button>
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="card" id="card" role="group" aria-label="Magic e word">
+      <div class="tiles" id="tiles"></div>
+    </div>
+    <div class="reveal" id="reveal">
+      <span class="emoji" id="emoji">🦸</span>
+      <span class="word" id="word">cape</span>
+    </div>
+    <div class="tap-hint">👆 tap a vowel to spot it</div>
+
+    <div class="nav">
+      <button class="arrow" id="prevBtn" aria-label="Previous word">←</button>
+      <button class="say" id="addBtn" aria-label="Add magic e">🪄 Add magic e</button>
+      <button class="arrow" id="nextBtn" aria-label="Next word">→</button>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="counter" id="counter">1 / 10</div>
+    <div class="progress"><i id="bar"></i></div>
+    <div class="rail" id="rail" aria-label="Jump to a word"></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script src="../shared/data.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+
+  var WORDS = Pop.data.magicE;  // [short, long, emoji]
+  var VOWELS = { a:1, e:1, i:1, o:1, u:1 };
+
+  var order = WORDS.map(function(_,i){ return i; });
+  var pos = 0, shuffled = false;
+  var card=$("card"), tilesEl=$("tiles"), reveal=$("reveal"),
+      emoji=$("emoji"), word=$("word"), counter=$("counter"), bar=$("bar"), rail=$("rail");
+
+  WORDS.forEach(function(w, idx){
+    var b = Pop.el("button", { text: w[1], "aria-label": "Go to " + w[1] });
+    b.addEventListener("click", function(){ pos = order.indexOf(idx); render(true); });
+    rail.appendChild(b);
+  });
+  var railBtns = Array.prototype.slice.call(rail.children);
+
+  function current(){ return WORDS[ order[pos] ]; }
+
+  var magicTile = null;
+
+  function render(animate){
+    var w = current(), letters = w[0].split(""), col = Pop.color(order[pos]);
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+
+    tilesEl.innerHTML = "";
+    letters.forEach(function(ch){
+      var isVowel = !!VOWELS[ch];
+      var t = Pop.el("button", {
+        "class": "tile" + (isVowel ? " vowel" : ""),
+        text: ch,
+        "aria-label": (isVowel ? "Vowel " : "Letter ") + ch
+      });
+      t.addEventListener("click", function(e){
+        e.stopPropagation();
+        lit(t); Pop.speak(ch);
+      });
+      tilesEl.appendChild(t);
+    });
+
+    // the greyed silent-e tile at the end
+    magicTile = Pop.el("button", { "class":"tile magic", text:"e", "aria-label":"Silent magic e" });
+    magicTile.addEventListener("click", function(e){ e.stopPropagation(); addE(); });
+    tilesEl.appendChild(magicTile);
+
+    emoji.textContent = w[2];
+    word.textContent = w[1];
+    reveal.classList.remove("show");
+    counter.textContent = (pos+1) + " / " + WORDS.length;
+    bar.style.width = ((pos+1)/WORDS.length*100) + "%";
+    railBtns.forEach(function(b,i){
+      var on = (i === order[pos]);
+      b.classList.toggle("active", on);
+      b.style.background = on ? col[0] : "#fff";
+    });
+    if(animate){ card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop"); }
+  }
+
+  function lit(tile){
+    tile.classList.add("lit");
+    setTimeout(function(){ tile.classList.remove("lit"); }, 320);
+  }
+
+  function addE(){
+    var w = current();
+    // animate the silent e appearing
+    if(magicTile){ magicTile.classList.remove("added"); void magicTile.offsetWidth; magicTile.classList.add("added"); }
+    // hear "cap ... cape"
+    Pop.speakSeq([{ text: w[0], gap:500 }, { text: w[1], rate:0.9 }]);
+    // reveal the emoji + long word + sparkle
+    setTimeout(function(){
+      reveal.classList.add("show");
+      card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
+      Pop.sparkle(card);
+    }, 360);
+  }
+
+  function go(dir){ pos = (pos + dir + WORDS.length) % WORDS.length; render(true); }
+
+  card.addEventListener("click", addE);
+  $("addBtn").addEventListener("click", addE);
+  $("prevBtn").addEventListener("click", function(){ go(-1); });
+  $("nextBtn").addEventListener("click", function(){ go(1); });
+
+  $("shuffleBtn").addEventListener("click", function(){
+    shuffled = !shuffled;
+    this.setAttribute("aria-pressed", String(shuffled));
+    var currentIdx = order[pos];
+    if(shuffled){
+      order = Pop.shuffle(order);
+      if(order[0]===currentIdx && order.length>1){ var t=order[0]; order[0]=order[1]; order[1]=t; }
+      pos = 0;
+    }else{
+      order = WORDS.map(function(_,i){ return i; });
+      pos = order.indexOf(currentIdx);
+    }
+    render(true);
+  });
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  Pop.onArrows(function(){go(-1);}, function(){go(1);}, addE);
+  render(false);
+})();
+</script>
+</body>
+</html>
