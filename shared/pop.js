@@ -302,6 +302,30 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", injectVoiceButton);
   else injectVoiceButton();
 
+  /* ---------- daily-plan activity tracking ----------
+     On a game page, count interactions today so the plan can tick it off. */
+  (function trackActivity() {
+    var m = location.pathname.match(/\/apps\/([^\/]+?)\.html$/i);
+    if (!m) return;
+    var slug = m[1];
+    function pad(n){ return n < 10 ? "0" + n : "" + n; }
+    function today(){ var d = new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+    function bump() {
+      try {
+        var t = today();
+        var a = JSON.parse(localStorage.getItem("pop-activity") || "{}");
+        a[t] = a[t] || {};
+        if ((a[t][slug] || 0) >= 12) return;            // enough for today; stop writing
+        a[t][slug] = (a[t][slug] || 0) + 1;
+        var keys = Object.keys(a).sort();
+        while (keys.length > 14) delete a[keys.shift()]; // keep ~2 weeks
+        localStorage.setItem("pop-activity", JSON.stringify(a));
+      } catch (e) {}
+    }
+    bump();                                              // opening counts as a touch
+    document.addEventListener("click", bump, true);
+  })();
+
   global.Pop = {
     ROOT: ROOT,
     $: $, el: el, shuffle: shuffle,
