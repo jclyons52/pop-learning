@@ -6,15 +6,31 @@ A little suite of bright, tappable learning games for kids who are just starting
 
 Everything runs in the browser, works **offline**, and can be **installed as an app** on a phone, tablet, or computer (no app store, no sign-up, no ads).
 
+## A guided daily plan
+
+The home screen opens with **Today's Plan** — a short, adaptive ~10-minute
+session (a warm-up, two focus games, and a number game) chosen to match where
+your child is at. It uses **spaced review** and **mastery-gated stages**, so it
+quietly advances as they're ready, builds a gentle **streak**, and celebrates
+when the day's plan is done. *Little and often* is what makes reading stick.
+
+Grown-ups can see how it's going — and nudge the level — in the
+**Grown-up Corner** (progress heat-grid, sticker shelf, per-game stats, and the
+reading/numbers stage controls).
+
 ## The games
 
-| Game | What it teaches |
-|------|-----------------|
-| 🔤 **Alphabet Pop** | Letters A–Z, their sounds, and a word for each. |
-| 👀 **Sight Words** | Common high-frequency "Magic Words" to recognise by heart, with example sentences. |
-| 🪄 **Sound It Out** | Tap each letter to hear its sound, then blend them into a word (c‑a‑t → cat). |
-| 👨‍👩‍👧 **Word Families** | Same ending, swap the first sound: cat, hat, bat, rat. |
-| 🔢 **Counting Pop** | Count objects from 1 to 20, out loud. |
+Around two dozen games, grouped by skill on the home screen:
+
+- **Letters & Sounds** — Alphabet Pop, Sound Match, First Sounds, Letter Trace
+- **Blending & Word Building** — Sound It Out, Word Families, Rhyme Time, Magic e, Spell It
+- **Phonics Patterns** — Digraphs, Blends, Vowel Teams
+- **Reading** — Sight Words, Sentence Pop, Story Pop, Speed Words, Phonics Check
+- **Numbers** — Counting Pop, Quick Count, Make Ten, Add & Take, Skip Count, Shape Pop
+
+They follow evidence-based **systematic synthetic phonics** ordering (phonemic
+awareness → letter-sounds → blending → patterns → connected text → fluency), with
+a parallel early-numeracy track. See [`ROADMAP.md`](ROADMAP.md) for the plan.
 
 All games speak using the device's built-in voice (it prefers an Australian/British English voice when one is available) and use big, chunky, kid-friendly buttons.
 
@@ -30,12 +46,15 @@ Once installed it opens full-screen like a normal app and works without internet
 Plain HTML, CSS, and JavaScript — no build step, no dependencies.
 
 ```
-index.html              hub / launcher
+index.html              hub / launcher + Today's Plan
+parent.html             Grown-up Corner (progress, stickers, stage controls)
 apps/                   one self-contained page per game
 shared/pop.css          shared design system (the "crayon box" look)
-shared/pop.js           shared speech, sparkle effects, and PWA wiring
+shared/pop.js           speech, sparkle, PWA wiring, progress + activity tracking
+shared/data.js          all word / phonics / number content (Pop.data)
+shared/plan.js          the daily-plan engine (curriculum, mastery, streak)
 manifest.webmanifest    install metadata
-service-worker.js       offline caching
+service-worker.js       offline caching (bump VERSION when files change)
 icons/                  app icons (+ make_icons.py that generates them)
 ```
 

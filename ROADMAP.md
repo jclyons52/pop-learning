@@ -47,6 +47,10 @@ ads. Don't let new features compete with the actual reading.
 - **Shape Pop** — recognise circle/square/triangle/rectangle/star/heart.
 
 **Across the whole suite**
+- **Daily Plan** — an adaptive ~10-minute daily session on the home screen
+  (warm-up → 2 focus → numbers), built from a stage curriculum + her progress,
+  with spaced review, mastery-gated stage progression (automatic, with a parent
+  override in Grown-up Corner), a gentle streak and a finish celebration.
 - **Voice picker** — choose the best device voice; saved across all games.
 - **Progress store** — per-item mastery in `localStorage` (`Pop.progress`).
 - **Sticker rewards** — a sticker every few correct answers (`Pop.stickers`).
@@ -70,7 +74,7 @@ The roadmap's core is built. Future depth, roughly in priority order:
 - [ ] **Handwriting accuracy** — optional stroke-order guidance and gentle
       "stay on the line" feedback in Letter Trace.
 - [ ] **Numeracy depth** — teen-number place value, doubles, simple money/time.
-- [ ] **Daily streak / "play 3 games" goal** — gentle, non-pressury.
+- [ ] **Multiple child profiles** — separate plans/progress per child.
 
 ## 🚫 Deliberately avoiding
 
