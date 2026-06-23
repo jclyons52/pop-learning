@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Make Ten · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  /* ten-frame fills the card */
+  #card{ aspect-ratio:1/0.92; gap:12px; }
+  .frame{
+    display:grid; grid-template-columns:repeat(5, 1fr); grid-template-rows:repeat(2, 1fr);
+    gap:clamp(4px,1.6vw,9px);
+    background:rgba(255,255,255,.28);
+    padding:clamp(6px,2.4vw,12px); border-radius:18px;
+  }
+  .cell{
+    width:clamp(34px,11vw,56px); aspect-ratio:1/1;
+    background:rgba(255,255,255,.55); border-radius:12px;
+    display:grid; place-items:center;
+    font-size:clamp(1.3rem,6vw,2rem); line-height:1;
+  }
+  .cell.filled{ background:#fff; box-shadow:0 3px 0 rgba(0,0,0,.10); }
+  .prompt-say{
+    margin-top:2px; border:none; cursor:pointer;
+    background:rgba(255,255,255,.92); color:var(--ink);
+    font-family:var(--font); font-weight:700; font-size:clamp(.95rem,4vw,1.2rem);
+    border-radius:999px; padding:9px 18px; box-shadow:0 4px 0 rgba(0,0,0,.14);
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .prompt-say:active{ transform:translateY(4px); box-shadow:0 0 0 rgba(0,0,0,.14); }
+
+  .choices{
+    display:grid; grid-template-columns:repeat(3, 1fr);
+    gap:clamp(8px,3vw,16px);
+    width:min(86vw, 420px);
+  }
+  .choice{
+    border:none; cursor:pointer;
+    aspect-ratio:1/1; border-radius:22px;
+    background:#fff; color:var(--ink);
+    font-family:var(--font); font-weight:700;
+    font-size:clamp(2.4rem,12vw,3.6rem); line-height:1;
+    display:grid; place-items:center;
+    box-shadow:0 7px 0 var(--shadow);
+    transition:transform .1s ease, box-shadow .1s ease, background .15s ease;
+  }
+  .choice:active{ transform:translateY(5px); box-shadow:0 2px 0 var(--shadow); }
+  .choice:focus-visible{ outline:3px solid #4DABF7; outline-offset:2px; }
+  .choice.correct{ background:#37B24D; color:#fff; box-shadow:0 7px 0 #2B8A3E; animation:pop .42s cubic-bezier(.34,1.56,.64,1); }
+  .choice.wrong{ background:#FA5252; color:#fff; box-shadow:0 7px 0 #D23B3B; animation:shake .4s; }
+  .choice.dim{ opacity:.35; pointer-events:none; }
+  @keyframes shake{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-7px); } 40%{ transform:translateX(7px); } 60%{ transform:translateX(-5px); } 80%{ transform:translateX(5px); } }
+
+  .scorebar{ display:flex; align-items:center; gap:16px; font-weight:600; }
+  .score{ font-size:1rem; color:var(--ink); }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Make&nbsp;<span>Ten</span></h1>
+        <p>Find the missing part</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <button class="card" id="card" aria-label="Ten frame card. Tap to hear the question again.">
+      <div class="frame" id="frame"></div>
+      <span class="prompt-say">🔊 Say it again</span>
+    </button>
+    <div class="choices" id="choices" aria-label="Tap the number that makes ten"></div>
+    <div class="tap-hint" id="hint">👆 what makes ten?</div>
+  </main>
+
+  <footer class="bottom">
+    <div class="scorebar">
+      <span class="score" id="score">⭐ 0</span>
+      <span class="counter" id="counter">1 / 10</span>
+    </div>
+    <div class="progress"><i id="bar"></i></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script src="../shared/data.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+  var WORDS = Pop.data.numberWords;
+  var OBJECTS = Pop.data.countObjects;
+  var ROUNDS = 10;
+
+  var pos = 0, score = 0, locked = false;
+  var x = 1, partner = 9, obj = "🍎";
+  var card=$("card"), frame=$("frame"), choicesEl=$("choices"),
+      hint=$("hint"), scoreEl=$("score"), counter=$("counter"), bar=$("bar");
+
+  function speakPrompt(){
+    Pop.speak(WORDS[x-1] + " and what makes ten?");
+  }
+
+  function newRound(){
+    locked = false;
+    x = 1 + Math.floor(Math.random() * 9);   // 1..9
+    partner = 10 - x;
+    obj = OBJECTS[Math.floor(Math.random() * OBJECTS.length)];
+    var col = Pop.color(pos);
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+
+    frame.innerHTML = "";
+    for(var i=0;i<10;i++){
+      var filled = i < x;
+      frame.appendChild(Pop.el("div", {
+        "class":"cell" + (filled ? " filled" : ""),
+        text: filled ? obj : ""
+      }));
+    }
+
+    // 3 choices: the partner + 2 distractors (1..9)
+    var pool = [];
+    for(var n=1; n<=9; n++){ if(n !== partner) pool.push(n); }
+    pool = Pop.shuffle(pool).slice(0, 2);
+    var set = Pop.shuffle(pool.concat([partner]));
+
+    choicesEl.innerHTML = "";
+    set.forEach(function(num){
+      var b = Pop.el("button", { "class":"choice", text: String(num), "aria-label": String(num) });
+      b.addEventListener("click", function(){ choose(b, num); });
+      choicesEl.appendChild(b);
+    });
+
+    hint.textContent = "👆 what makes ten?";
+    counter.textContent = (pos+1) + " / " + ROUNDS;
+    bar.style.width = ((pos+1)/ROUNDS*100) + "%";
+    setTimeout(speakPrompt, 250);
+  }
+
+  function choose(btn, num){
+    if(locked) return;
+    var correct = (num === partner);
+    Pop.progress.record("bonds", String(x), correct);
+    if(correct){
+      locked = true;
+      btn.classList.add("correct");
+      Pop.sparkle(card);
+      score++; scoreEl.textContent = "⭐ " + score;
+      Pop.speak(WORDS[x-1] + " and " + WORDS[partner-1] + " make ten!");
+      setTimeout(next, 1100);
+    } else {
+      btn.classList.add("wrong", "dim");
+      hint.textContent = "Not quite — count the empty spaces!";
+      Pop.speak("Try again.");
+      setTimeout(function(){ btn.classList.remove("wrong"); }, 420);
+    }
+  }
+
+  function next(){
+    pos++;
+    if(pos >= ROUNDS){
+      Pop.sparkle(card);
+      Pop.speak("Great job making ten!");
+      pos = 0;
+    }
+    newRound();
+  }
+
+  card.addEventListener("click", speakPrompt);
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  newRound();
+})();
+</script>
+</body>
+</html>
