@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Grown-up Corner · Pop Learning</title>
+<link rel="stylesheet" href="shared/pop.css" />
+<style>
+  .wrap{
+    width:min(96vw, 760px);
+    margin:0 auto;
+    padding:6px clamp(14px,4vw,24px) calc(28px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; gap:clamp(16px,3vh,24px);
+  }
+
+  /* generic white card */
+  .panel{
+    background:#fff;
+    border-radius:22px;
+    box-shadow:0 3px 0 var(--shadow);
+    padding:clamp(16px,4vw,22px);
+  }
+  .panel h2{
+    margin:0 0 4px;
+    font-size:1.15rem; font-weight:700;
+    display:flex; align-items:center; gap:9px;
+  }
+  .panel .sub{ margin:0 0 14px; color:var(--ink-soft); font-size:.85rem; font-weight:500; }
+
+  /* 1) summary strip */
+  .summary{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:clamp(10px,3vw,16px);
+  }
+  .stat{
+    background:#fff;
+    border-radius:22px;
+    box-shadow:0 3px 0 var(--shadow);
+    padding:clamp(14px,3.5vw,20px) 12px;
+    text-align:center;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .stat .num{ font-size:clamp(1.8rem,8vw,2.6rem); font-weight:700; line-height:1; color:var(--ink); }
+  .stat .lbl{ font-size:.78rem; font-weight:600; color:var(--ink-soft); }
+
+  /* 2) sticker shelf */
+  .shelf{
+    display:flex; flex-wrap:wrap; gap:10px;
+    background:#FBEFDC;
+    border-radius:18px;
+    padding:16px 14px;
+    box-shadow:inset 0 2px 0 var(--shadow);
+  }
+  .slot{
+    width:clamp(44px,11vw,56px); height:clamp(44px,11vw,56px);
+    border-radius:16px;
+    display:grid; place-items:center;
+    font-size:clamp(1.5rem,6vw,2rem);
+    background:#fff;
+    box-shadow:0 2px 0 var(--shadow);
+  }
+  .slot.locked{ background:#EFE3CE; opacity:.55; filter:grayscale(1); box-shadow:none; }
+  .shelf-caption{ margin:12px 0 0; font-size:.82rem; color:var(--ink-soft); font-weight:500; }
+
+  /* 3) letter-sounds heat grid */
+  .heat{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(clamp(40px,11vw,52px), 1fr));
+    gap:7px;
+  }
+  .cell{
+    aspect-ratio:1 / 1;
+    border-radius:13px;
+    display:grid; place-items:center;
+    font-size:clamp(1rem,4.6vw,1.4rem);
+    font-weight:700;
+    color:var(--ink);
+    box-shadow:0 2px 0 var(--shadow);
+  }
+  .cell.good{ background:#B2F2BB; }
+  .cell.shaky{ background:#FFE3A3; }
+  .cell.cold{ background:#EFE3CE; color:var(--ink-soft); box-shadow:none; }
+  .legend{ display:flex; flex-wrap:wrap; gap:14px; margin-top:14px; font-size:.78rem; color:var(--ink-soft); font-weight:600; }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .dot{ width:14px; height:14px; border-radius:5px; }
+  .dot.good{ background:#B2F2BB; }
+  .dot.shaky{ background:#FFE3A3; }
+  .dot.cold{ background:#EFE3CE; }
+
+  /* 4) per-game table */
+  table.games{ width:100%; border-collapse:collapse; font-size:.9rem; }
+  table.games th, table.games td{ text-align:left; padding:9px 8px; }
+  table.games th{ color:var(--ink-soft); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.4px; }
+  table.games tbody tr{ border-top:2px solid #F4E9D6; }
+  table.games td.name{ font-weight:600; }
+  table.games td.right{ text-align:right; }
+  table.games th.right{ text-align:right; }
+  .acc-pill{
+    display:inline-block; min-width:46px; text-align:center;
+    border-radius:999px; padding:3px 9px; font-weight:700; font-size:.82rem;
+    background:#EFE3CE; color:var(--ink);
+  }
+  .acc-pill.good{ background:#B2F2BB; }
+  .acc-pill.shaky{ background:#FFE3A3; }
+
+  /* 5) reset + 6) note */
+  .note{
+    background:#fff; border-radius:22px; box-shadow:0 3px 0 var(--shadow);
+    padding:clamp(16px,4vw,22px); color:var(--ink-soft); font-size:.92rem; line-height:1.5; font-weight:500;
+  }
+  .note b{ color:var(--ink); }
+  .reset-row{ display:flex; justify-content:center; padding-top:4px; }
+  .reset{
+    border:none; cursor:pointer; font-family:var(--font); font-weight:700; font-size:.95rem;
+    background:#fff; color:var(--pop);
+    border-radius:999px; padding:12px 26px;
+    box-shadow:0 3px 0 var(--shadow);
+    display:inline-flex; align-items:center; gap:8px;
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .reset:active{ transform:translateY(3px); box-shadow:0 0 0 var(--shadow); }
+  .reset:focus-visible{ outline:3px solid #4DABF7; outline-offset:2px; }
+
+  .empty{
+    text-align:center; color:var(--ink-soft); font-weight:600; font-size:.95rem;
+    padding:8px 0;
+  }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="index.html" aria-label="Home">🏠</a>
+      <div class="titles">
+        <h1>Grown-up&nbsp;<span>Corner</span></h1>
+        <p>See how it's going</p>
+      </div>
+    </div>
+    <div class="controls"></div>
+  </header>
+
+  <main class="wrap">
+    <!-- 1) summary strip -->
+    <section class="summary" aria-label="Summary">
+      <div class="stat"><span class="num" id="sumCorrect">0</span><span class="lbl">Correct answers</span></div>
+      <div class="stat"><span class="num" id="sumGames">0</span><span class="lbl">Games played</span></div>
+      <div class="stat"><span class="num" id="sumStickers">0</span><span class="lbl">Stickers earned</span></div>
+    </section>
+
+    <!-- 2) sticker shelf -->
+    <section class="panel">
+      <h2>🏅 Sticker shelf</h2>
+      <p class="sub" id="shelfEmpty" hidden>No stickers yet — every bit of practice fills the shelf.</p>
+      <div class="shelf" id="shelf"></div>
+      <p class="shelf-caption" id="shelfCaption"></p>
+    </section>
+
+    <!-- 3) letter-sounds heat grid -->
+    <section class="panel">
+      <h2>🔤 Letter sounds A–Z</h2>
+      <p class="sub">A quick look at which sounds are sticking, across the sound games.</p>
+      <div class="heat" id="heat"></div>
+      <div class="legend">
+        <span><i class="dot good"></i> Sticking</span>
+        <span><i class="dot shaky"></i> Still learning</span>
+        <span><i class="dot cold"></i> Not tried yet</span>
+      </div>
+    </section>
+
+    <!-- 4) per-game table -->
+    <section class="panel">
+      <h2>🎲 Each game</h2>
+      <p class="sub">Attempts, correct answers and accuracy so far.</p>
+      <table class="games">
+        <thead>
+          <tr>
+            <th>Game</th>
+            <th class="right">Tries</th>
+            <th class="right">Right</th>
+            <th class="right">Accuracy</th>
+          </tr>
+        </thead>
+        <tbody id="gamesBody"></tbody>
+      </table>
+    </section>
+
+    <!-- 6) reassuring note -->
+    <section class="note">
+      <b>How to use Pop Learning:</b> little and often works best — a few minutes a day
+      beats a long session. Celebrate the effort rather than the score, and let her tap
+      freely and explore; there's no way to get it wrong here. The numbers above are just
+      for you — they're a gentle guide, not a report card.
+    </section>
+
+    <!-- 5) reset -->
+    <div class="reset-row">
+      <button class="reset" id="resetBtn">🧹 Reset all progress</button>
+    </div>
+  </main>
+
+<script src="shared/pop.js"></script>
+<script src="shared/data.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  // games whose item keys are letters and tell us about letter-sound mastery
+  var SOUND_GAMES = ["sound-match", "first-sounds", "trace"];
+
+  var GAME_NAMES = {
+    "sound-match":  "Sound Match",
+    "first-sounds": "First Sounds",
+    "spell":        "Spell It",
+    "rhyme":        "Rhyme Time",
+    "addtake":      "Add & Take",
+    "bonds":        "Make Ten",
+    "subitise":     "Quick Count",
+    "skip":         "Skip Count",
+    "shapes":       "Shape Pop",
+    "phonics-check":"Phonics Check",
+    "speed":        "Speed Words",
+    "story":        "Story Pop",
+    "magic-e":      "Magic e"
+  };
+
+  function prettify(id){
+    return String(id).split(/[-_]/).map(function(w){
+      return w ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+    }).join(" ");
+  }
+  function gameName(id){ return GAME_NAMES[id] || prettify(id); }
+
+  var progress = Pop.progress.all();
+  var gameIds = [];
+  for (var g in progress) if (progress.hasOwnProperty(g)) gameIds.push(g);
+
+  /* ---- 1) summary strip ---- */
+  Pop.$("sumCorrect").textContent  = Pop.progress.totalCorrect();
+  Pop.$("sumGames").textContent    = gameIds.length;
+  var earned = Pop.stickers.earned();
+  Pop.$("sumStickers").textContent = earned.length;
+
+  /* ---- 2) sticker shelf ---- */
+  var allStickers = Pop.stickers.all();
+  var shelf = Pop.$("shelf");
+  if (!earned.length) Pop.$("shelfEmpty").hidden = false;
+  allStickers.forEach(function(emoji, i){
+    var got = i < earned.length;
+    var slot = Pop.el("div", { "class": "slot" + (got ? "" : " locked") });
+    slot.textContent = got ? earned[i] : emoji;
+    if (!got) slot.setAttribute("aria-label", "Locked sticker");
+    shelf.appendChild(slot);
+  });
+  Pop.$("shelfCaption").textContent =
+    "A sticker every " + Pop.stickers.per + " correct answers.";
+
+  /* ---- 3) letter-sounds heat grid ---- */
+  var heat = Pop.$("heat");
+  ALPHA.forEach(function(L){
+    var seen = 0, right = 0;
+    SOUND_GAMES.forEach(function(gid){
+      var game = progress[gid];
+      if (game && game[L]) { seen += (game[L].seen || 0); right += (game[L].right || 0); }
+    });
+    var cls = "cold";
+    if (seen >= 2 && (right / seen) >= 0.8) cls = "good";
+    else if (seen >= 1) cls = "shaky";
+    var cell = Pop.el("div", { "class": "cell " + cls });
+    cell.textContent = L.toLowerCase();
+    cell.setAttribute("title",
+      cls === "cold" ? L + " — not tried yet"
+      : L + " — " + right + "/" + seen + " correct");
+    heat.appendChild(cell);
+  });
+
+  /* ---- 4) per-game table ---- */
+  var body = Pop.$("gamesBody");
+  // show known games even at zero, plus any unknown ids that have data
+  var rowIds = [];
+  for (var k in GAME_NAMES) if (GAME_NAMES.hasOwnProperty(k)) rowIds.push(k);
+  gameIds.forEach(function(id){ if (rowIds.indexOf(id) === -1) rowIds.push(id); });
+
+  rowIds.sort(function(a,b){ return gameName(a).localeCompare(gameName(b)); });
+
+  rowIds.forEach(function(id){
+    var game = progress[id] || {};
+    var seen = 0, right = 0;
+    for (var key in game) if (game.hasOwnProperty(key)) {
+      seen += (game[key].seen || 0); right += (game[key].right || 0);
+    }
+    var acc = seen ? Math.round((right / seen) * 100) : null;
+    var accCls = acc === null ? "" : (acc >= 80 ? " good" : (acc >= 50 ? " shaky" : ""));
+
+    var tr = Pop.el("tr");
+    tr.appendChild(Pop.el("td", { "class": "name", text: gameName(id) }));
+    tr.appendChild(Pop.el("td", { "class": "right", text: String(seen) }));
+    tr.appendChild(Pop.el("td", { "class": "right", text: String(right) }));
+
+    var accTd = Pop.el("td", { "class": "right" });
+    var pill = Pop.el("span", { "class": "acc-pill" + accCls, text: acc === null ? "–" : acc + "%" });
+    accTd.appendChild(pill);
+    tr.appendChild(accTd);
+
+    body.appendChild(tr);
+  });
+
+  // empty-state banner above the table when there's no progress at all
+  if (Pop.progress.totalCorrect() === 0 && gameIds.length === 0) {
+    var banner = Pop.el("tr");
+    var td = Pop.el("td", { "class": "empty", text: "No stars yet — pick a game and start playing!" });
+    td.setAttribute("colspan", "4");
+    banner.appendChild(td);
+    body.insertBefore(banner, body.firstChild);
+  }
+
+  /* ---- 5) reset ---- */
+  Pop.$("resetBtn").addEventListener("click", function(){
+    var ok = window.confirm("Clear all progress and start fresh? This can't be undone.");
+    if (!ok) return;
+    Pop.progress.reset();
+    location.reload();
+  });
+})();
+</script>
+</body>
+</html>
