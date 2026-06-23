@@ -38,6 +38,47 @@
   .tile .desc{ font-size:.9rem; font-weight:500; opacity:.93; line-height:1.25; }
   .tile .go{ margin-top:auto; font-weight:600; font-size:.85rem; opacity:.92; }
 
+  /* ---------- today's plan ---------- */
+  .plan{
+    width:min(96vw, 960px); margin:clamp(14px,3vh,24px) auto 0; padding:0 18px;
+  }
+  .plan-card{
+    background:#fff; border-radius:26px; padding:18px 18px 16px;
+    box-shadow:0 6px 0 var(--shadow), 0 16px 30px rgba(43,36,64,.12);
+  }
+  .plan-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px; }
+  .plan-head h2{ margin:0; font-size:clamp(1.15rem,5vw,1.45rem); font-weight:700; }
+  .streak{
+    font-weight:700; font-size:.9rem; color:var(--ink);
+    background:#FFF3BF; border-radius:999px; padding:6px 12px; white-space:nowrap;
+  }
+  .plan-sub{ margin:0 0 12px; color:var(--ink-soft); font-size:.85rem; font-weight:500; }
+  .plan-steps{ display:flex; flex-direction:column; gap:9px; }
+  .step{
+    display:flex; align-items:center; gap:13px; text-decoration:none;
+    background:var(--paper); border-radius:18px; padding:12px 14px;
+    box-shadow:0 2px 0 var(--shadow); color:var(--ink);
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .step:active{ transform:translateY(2px); box-shadow:0 0 0 var(--shadow); }
+  .step .badge{
+    flex:0 0 auto; width:44px; height:44px; border-radius:14px; display:grid; place-items:center;
+    font-size:1.4rem; background:#fff; box-shadow:0 2px 0 var(--shadow);
+  }
+  .step .meta{ flex:1; min-width:0; display:flex; flex-direction:column; line-height:1.15; }
+  .step .role{ font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft); }
+  .step .name{ font-size:1.05rem; font-weight:700; }
+  .step .state{ flex:0 0 auto; font-size:1.3rem; }
+  .step.next{ outline:3px solid #FFD43B; outline-offset:0; }
+  .step.done{ opacity:.62; }
+  .step.done .name{ text-decoration:line-through; }
+  .plan-foot{ display:flex; align-items:center; gap:12px; margin-top:13px; }
+  .dots{ display:flex; gap:6px; }
+  .dot{ width:11px; height:11px; border-radius:50%; background:#E4D8C2; }
+  .dot.on{ background:linear-gradient(135deg,#FA5252,#FF922B); }
+  .plan-status{ font-size:.85rem; font-weight:600; color:var(--ink-soft); }
+  .plan-status.done{ color:#2B8A3E; }
+
   .footer{ text-align:center; padding:clamp(20px,5vh,40px) 18px calc(22px + env(safe-area-inset-bottom)); color:var(--ink-soft); }
   .footer-actions{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
   .pill{
@@ -59,6 +100,21 @@
     <p>Tap, listen, learn — little games for early readers 🦉</p>
   </header>
 
+  <section class="plan" id="planWrap" hidden>
+    <div class="plan-card">
+      <div class="plan-head">
+        <h2>🌅 Today's Plan</h2>
+        <span class="streak" id="streak" hidden></span>
+      </div>
+      <p class="plan-sub" id="planSub">A little session — about 10 minutes.</p>
+      <div class="plan-steps" id="planSteps"></div>
+      <div class="plan-foot">
+        <div class="dots" id="planDots"></div>
+        <span class="plan-status" id="planStatus"></span>
+      </div>
+    </div>
+  </section>
+
   <main id="main" aria-label="Choose a game"></main>
 
   <footer class="footer">
@@ -71,9 +127,50 @@
   </footer>
 
 <script src="shared/pop.js"></script>
+<script src="shared/plan.js"></script>
 <script>
 (function(){
   "use strict";
+
+  /* ----- Today's Plan ----- */
+  (function renderPlan(){
+    if(!Pop.plan) return;
+    var wrap = Pop.$("planWrap"), stepsEl = Pop.$("planSteps"),
+        dotsEl = Pop.$("planDots"), statusEl = Pop.$("planStatus"), streakEl = Pop.$("streak");
+    var steps = Pop.plan.today();
+    var nextSet = false;
+    stepsEl.innerHTML = "";
+    steps.forEach(function(s){
+      var a = Pop.el("a", { "class":"step" + (s.done ? " done" : ""), href:s.href });
+      if(!s.done && !nextSet){ a.className += " next"; nextSet = true; }
+      a.innerHTML =
+        '<span class="badge">'+s.roleIcon+'</span>' +
+        '<span class="meta"><span class="role">'+s.roleLabel+'</span><span class="name">'+s.name+'</span></span>' +
+        '<span class="state">'+(s.done ? "✅" : "▶️")+'</span>';
+      stepsEl.appendChild(a);
+    });
+
+    var comp = Pop.plan.completion();
+    dotsEl.innerHTML = "";
+    for(var i=0;i<comp.total;i++){
+      dotsEl.appendChild(Pop.el("span", { "class":"dot" + (i < comp.done ? " on" : "") }));
+    }
+
+    var res = Pop.plan.checkComplete();
+    var allDone = comp.done >= comp.total && comp.total > 0;
+    if(allDone){
+      statusEl.textContent = "🎉 All done today — see you tomorrow!";
+      statusEl.classList.add("done");
+      if(res.justCompleted) setTimeout(function(){ Pop.sparkle(Pop.$("planWrap")); }, 200);
+    } else {
+      statusEl.textContent = comp.done + " of " + comp.total + " done";
+    }
+
+    var st = res.streak || Pop.plan.streak();
+    if(st > 0){ streakEl.textContent = "🔥 " + st + (st===1 ? " day" : " day streak"); streakEl.hidden = false; }
+    wrap.hidden = false;
+  })();
+
   var CATEGORIES = [
     { title:"Letters & Sounds", icon:"🔤", items:[
       { href:"apps/alphabet-pop.html", ico:"🔤", name:"Alphabet Pop", desc:"Letters and their sounds, A to Z.", c:0 },
