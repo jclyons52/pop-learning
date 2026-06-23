@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Sentence Pop · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  .words{
+    display:flex; flex-wrap:wrap; gap:clamp(6px,2vw,12px);
+    justify-content:center; align-items:center;
+  }
+  .word-chip{
+    border:none; cursor:pointer;
+    background:#fff; color:var(--ink);
+    font-family:var(--font); font-weight:700;
+    font-size:clamp(1.3rem,6.4vw,2.2rem); line-height:1;
+    border-radius:16px; padding:10px 14px 11px;
+    box-shadow:0 6px 0 rgba(0,0,0,.16);
+    transition:transform .1s ease, box-shadow .1s ease, background .15s ease, color .15s ease;
+  }
+  .word-chip:active,.word-chip.lit{
+    transform:translateY(5px); box-shadow:0 1px 0 rgba(0,0,0,.16);
+    background:#FFD43B; color:var(--ink);
+  }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Sentence&nbsp;<span>Pop</span></h1>
+        <p>Read it word by word</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="shuffleBtn" aria-pressed="false" aria-label="Shuffle order">🔀 Shuffle</button>
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="card" id="card" role="group" aria-label="Sentence">
+      <div class="words" id="words"></div>
+    </div>
+    <div class="tap-hint">👆 tap a word to hear it</div>
+
+    <div class="nav">
+      <button class="arrow" id="prevBtn" aria-label="Previous sentence">←</button>
+      <button class="say" id="readBtn" aria-label="Read the sentence">📖 Read it</button>
+      <button class="arrow" id="nextBtn" aria-label="Next sentence">→</button>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="counter" id="counter">1 / 10</div>
+    <div class="progress"><i id="bar"></i></div>
+    <div class="rail" id="rail" aria-label="Jump to a sentence"></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script src="../shared/data.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+
+  var SENTENCES = Pop.data.sentences;  // array of strings
+
+  var order = SENTENCES.map(function(_,i){ return i; });
+  var pos = 0, shuffled = false;
+  var card=$("card"), wordsEl=$("words"),
+      counter=$("counter"), bar=$("bar"), rail=$("rail");
+
+  SENTENCES.forEach(function(_, idx){
+    var b = Pop.el("button", { text: String(idx+1), "aria-label": "Go to sentence " + (idx+1) });
+    b.addEventListener("click", function(){ pos = order.indexOf(idx); render(true); });
+    rail.appendChild(b);
+  });
+  var railBtns = Array.prototype.slice.call(rail.children);
+
+  function current(){ return SENTENCES[ order[pos] ]; }
+
+  // split a sentence into words; keep trailing punctuation attached for display,
+  // but speak only the bare word.
+  function splitWords(s){ return s.split(/\s+/).filter(Boolean); }
+  function bareWord(w){ return w.replace(/[^A-Za-z']/g, ""); }
+
+  var chips = [];
+
+  function render(animate){
+    var s = current(), parts = splitWords(s), col = Pop.color(order[pos]);
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+
+    wordsEl.innerHTML = "";
+    chips = [];
+    parts.forEach(function(w){
+      var chip = Pop.el("button", { "class":"word-chip", text: w, "aria-label": "Say " + bareWord(w) });
+      chip.addEventListener("click", function(e){
+        e.stopPropagation();
+        lit(chip); Pop.speak(bareWord(w));
+      });
+      wordsEl.appendChild(chip);
+      chips.push(chip);
+    });
+
+    counter.textContent = (pos+1) + " / " + SENTENCES.length;
+    bar.style.width = ((pos+1)/SENTENCES.length*100) + "%";
+    railBtns.forEach(function(b,i){
+      var on = (i === order[pos]);
+      b.classList.toggle("active", on);
+      b.style.background = on ? col[0] : "#fff";
+    });
+    if(animate){ card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop"); }
+  }
+
+  function lit(chip){
+    chip.classList.add("lit");
+    setTimeout(function(){ chip.classList.remove("lit"); }, 320);
+  }
+
+  function read(){
+    var s = current(), parts = splitWords(s);
+    // audio: speak word by word with a small gap
+    var seq = parts.map(function(w, i){
+      return { text: bareWord(w), gap: i < parts.length-1 ? 160 : 0 };
+    });
+    Pop.speakSeq(seq);
+    // visual: highlight each chip in time
+    var step = 460;
+    chips.forEach(function(chip, i){
+      setTimeout(function(){ lit(chip); }, i*step);
+    });
+    setTimeout(function(){
+      card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
+      Pop.sparkle(card);
+    }, parts.length*step + 120);
+  }
+
+  function go(dir){ pos = (pos + dir + SENTENCES.length) % SENTENCES.length; render(true); }
+
+  card.addEventListener("click", read);
+  $("readBtn").addEventListener("click", read);
+  $("prevBtn").addEventListener("click", function(){ go(-1); });
+  $("nextBtn").addEventListener("click", function(){ go(1); });
+
+  $("shuffleBtn").addEventListener("click", function(){
+    shuffled = !shuffled;
+    this.setAttribute("aria-pressed", String(shuffled));
+    var currentIdx = order[pos];
+    if(shuffled){
+      order = Pop.shuffle(order);
+      if(order[0]===currentIdx && order.length>1){ var t=order[0]; order[0]=order[1]; order[1]=t; }
+      pos = 0;
+    }else{
+      order = SENTENCES.map(function(_,i){ return i; });
+      pos = order.indexOf(currentIdx);
+    }
+    render(true);
+  });
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  Pop.onArrows(function(){go(-1);}, function(){go(1);}, read);
+  render(false);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Story Pop · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  /* the story card holds tappable lines */
+  #card{ aspect-ratio:auto; width:min(90vw, 460px); min-height:clamp(180px,34vh,260px); padding:clamp(16px,5vw,26px); gap:10px; cursor:default; }
+  .lines{ display:flex; flex-direction:column; gap:clamp(8px,2.4vw,14px); width:100%; }
+  .line{
+    border:none; cursor:pointer; text-align:left;
+    background:rgba(255,255,255,.92); color:var(--ink);
+    font-family:var(--font); font-weight:600;
+    font-size:clamp(1.05rem,4.6vw,1.5rem); line-height:1.25;
+    border-radius:18px; padding:11px 16px;
+    box-shadow:0 4px 0 rgba(0,0,0,.12);
+    transition:transform .1s ease, box-shadow .1s ease, background .15s ease;
+  }
+  .line:active{ transform:translateY(4px); box-shadow:0 0 0 rgba(0,0,0,.12); }
+  .line:focus-visible{ outline:3px solid #4DABF7; outline-offset:2px; }
+  .line.lit{ background:#FFD43B; box-shadow:0 4px 0 #E0B400; }
+
+  .qbox{
+    width:min(90vw, 460px);
+    display:flex; flex-direction:column; gap:clamp(10px,3vw,16px);
+    align-items:stretch;
+  }
+  .qbox.hidden{ display:none; }
+  .question{
+    text-align:center; font-weight:700;
+    font-size:clamp(1.15rem,5vw,1.55rem); color:var(--ink);
+    background:#fff; border-radius:22px; padding:14px 16px;
+    box-shadow:0 6px 0 var(--shadow);
+    display:flex; align-items:center; justify-content:center; gap:10px;
+  }
+  .options{ display:flex; flex-direction:column; gap:clamp(8px,2.6vw,14px); }
+  .option{
+    border:none; cursor:pointer;
+    background:#fff; color:var(--ink);
+    font-family:var(--font); font-weight:700; text-transform:lowercase;
+    font-size:clamp(1.1rem,5vw,1.5rem);
+    border-radius:22px; padding:clamp(14px,4vw,20px) 18px;
+    box-shadow:0 7px 0 var(--shadow);
+    transition:transform .1s ease, box-shadow .1s ease, background .15s ease;
+  }
+  .option:active{ transform:translateY(5px); box-shadow:0 2px 0 var(--shadow); }
+  .option:focus-visible{ outline:3px solid #4DABF7; outline-offset:2px; }
+  .option.correct{ background:#37B24D; color:#fff; box-shadow:0 7px 0 #2B8A3E; animation:pop .42s cubic-bezier(.34,1.56,.64,1); }
+  .option.wrong{ background:#FA5252; color:#fff; box-shadow:0 7px 0 #D23B3B; animation:shake .4s; }
+  .option.dim{ opacity:.4; pointer-events:none; }
+  @keyframes shake{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-7px); } 40%{ transform:translateX(7px); } 60%{ transform:translateX(-5px); } 80%{ transform:translateX(5px); } }
+
+  .next-btn{
+    border:none; cursor:pointer; align-self:center;
+    background:#37B24D; color:#fff;
+    font-family:var(--font); font-weight:700;
+    font-size:clamp(1.05rem,4.6vw,1.35rem);
+    border-radius:999px; padding:13px clamp(22px,7vw,34px);
+    box-shadow:0 6px 0 #2B8A3E;
+    transition:transform .1s ease, box-shadow .1s ease;
+  }
+  .next-btn:active{ transform:translateY(6px); box-shadow:0 0 0 #2B8A3E; }
+  .next-btn:focus-visible{ outline:3px solid #2B2440; outline-offset:3px; }
+  .next-btn.hidden{ display:none; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Story&nbsp;<span>Pop</span></h1>
+        <p>Read it, then answer</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="card" id="card" aria-label="Story">
+      <div class="lines" id="lines"></div>
+    </div>
+
+    <div class="nav">
+      <button class="arrow" id="prevBtn" aria-label="Previous story">←</button>
+      <button class="say" id="readBtn" aria-label="Read the whole story">📖 Read story</button>
+      <button class="arrow" id="nextBtn" aria-label="Next story">→</button>
+    </div>
+
+    <button class="say" id="qBtn" aria-label="Show the question" style="background:#845EF7;color:#fff;box-shadow:0 6px 0 #6741D9;">❓ Question</button>
+
+    <div class="qbox hidden" id="qbox">
+      <div class="question" id="question"></div>
+      <div class="options" id="options"></div>
+      <button class="next-btn hidden" id="nextStoryBtn">Next story ➜</button>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="counter" id="counter">1 / 5</div>
+    <div class="progress"><i id="bar"></i></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script src="../shared/data.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+
+  var STORIES = Pop.data.stories;
+  var pos = 0, answered = false, triedWrong = false;
+
+  var card=$("card"), linesEl=$("lines"), counter=$("counter"), bar=$("bar"),
+      qbox=$("qbox"), questionEl=$("question"), optionsEl=$("options"),
+      nextStoryBtn=$("nextStoryBtn"), qBtn=$("qBtn");
+
+  function current(){ return STORIES[pos]; }
+
+  function clearLit(){
+    Array.prototype.forEach.call(linesEl.children, function(n){ n.classList.remove("lit"); });
+  }
+
+  function render(animate){
+    var s = current(), col = Pop.color(pos);
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+
+    linesEl.innerHTML = "";
+    s.lines.forEach(function(text){
+      var b = Pop.el("button", { "class":"line", text:text, "aria-label":"Read line: " + text });
+      b.addEventListener("click", function(){
+        clearLit(); b.classList.add("lit");
+        Pop.speak(text);
+      });
+      linesEl.appendChild(b);
+    });
+
+    // reset question state
+    answered = false; triedWrong = false;
+    qbox.classList.add("hidden");
+    qBtn.style.display = "";
+    nextStoryBtn.classList.add("hidden");
+
+    counter.textContent = (pos+1) + " / " + STORIES.length;
+    bar.style.width = ((pos+1)/STORIES.length*100) + "%";
+
+    if(animate){ card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop"); }
+  }
+
+  function readStory(){
+    var s = current(), kids = Array.prototype.slice.call(linesEl.children);
+    clearLit();
+    var parts = s.lines.map(function(text, i){
+      return { text:text, gap:450, _i:i };
+    });
+    // highlight each line as it is spoken
+    var i = 0;
+    function step(){
+      if(i >= kids.length) return;
+      clearLit();
+      kids[i].classList.add("lit");
+      i++;
+    }
+    // drive highlight in step with speech using a lightweight sequence
+    Pop.speakSeq(s.lines.map(function(text){ return { text:text, gap:450 }; }));
+    // visual highlight: approximate by stepping on an interval tied to line count
+    step();
+    var iv = setInterval(function(){
+      if(i >= kids.length){ clearInterval(iv); return; }
+      step();
+    }, 1700);
+  }
+
+  function showQuestion(){
+    var s = current();
+    qBtn.style.display = "none";
+    qbox.classList.remove("hidden");
+    questionEl.textContent = s.q;
+
+    optionsEl.innerHTML = "";
+    s.options.forEach(function(opt, i){
+      var b = Pop.el("button", { "class":"option", text:opt, "aria-label":"Answer: " + opt });
+      b.addEventListener("click", function(){ choose(b, i); });
+      optionsEl.appendChild(b);
+    });
+    Pop.speak(s.q);
+  }
+
+  function choose(btn, i){
+    if(answered) return;
+    var s = current();
+    var correct = (i === s.answer);
+    if(correct){
+      answered = true;
+      btn.classList.add("correct");
+      Array.prototype.forEach.call(optionsEl.children, function(n){ if(n!==btn) n.classList.add("dim"); });
+      Pop.sparkle(btn);
+      Pop.progress.record("story", pos, true);
+      Pop.speak("That's right!");
+      nextStoryBtn.classList.remove("hidden");
+    } else {
+      btn.classList.add("wrong", "dim");
+      if(!triedWrong){ Pop.progress.record("story", pos, false); triedWrong = true; }
+      Pop.speak("Try again.");
+      setTimeout(function(){ btn.classList.remove("wrong"); }, 420);
+    }
+  }
+
+  function go(dir){
+    pos = (pos + dir + STORIES.length) % STORIES.length;
+    render(true);
+  }
+
+  $("prevBtn").addEventListener("click", function(){ go(-1); });
+  $("nextBtn").addEventListener("click", function(){ go(1); });
+  $("readBtn").addEventListener("click", readStory);
+  qBtn.addEventListener("click", showQuestion);
+  nextStoryBtn.addEventListener("click", function(){ go(1); });
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  Pop.onArrows(function(){ go(-1); }, function(){ go(1); }, readStory);
+  render(false);
+})();
+</script>
+</body>
+</html>
