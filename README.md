@@ -67,22 +67,26 @@ python3 -m http.server 8000
 
 ## Tests & checks
 
-The app ships with **no build step**, but the shared logic has a safety net
-(Node ≥ 18, no dependencies needed for the first three):
+The app ships with **no build step and no runtime dependencies**, and the dev
+checks install **nothing from any package registry** — Node runs the
+zero-dependency checks (built-in modules only) and [Deno](https://deno.com)
+type-checks with its own bundled TypeScript. No `npm install`.
 
 ```bash
-npm run syntax     # every inline + shared script parses
-npm test           # unit tests for the plan logic (shared/plan-core.js)
-npm run validate   # game data integrity + plan/cache contract + SW-hash guard
-npm run typecheck  # tsc --noEmit over JSDoc-typed shared modules (needs: npm install)
-npm run check      # all of the above (what CI runs)
+node tests/syntax-check.js      # every inline + shared script parses
+node --test tests/*.test.js     # unit tests for the plan logic
+node tests/validate.js          # game-data integrity + plan/cache contract + SW-hash guard
+deno check shared/plan-core.js  # type-check the JSDoc-typed core (needs Deno)
 ```
+
+Or, with Deno installed, `deno task check` runs all four (see `deno.json`).
 
 `shared/plan-core.js` is **pure logic** (no DOM/storage) so it's unit-testable;
 `shared/plan.js` is the thin browser wrapper around it. After editing any
-precached file, run **`npm run stamp`** to refresh the service-worker asset hash
-(the offline cache name includes it, so caches bust automatically — and
-`validate` fails if you forget). CI runs everything on push (`.github/workflows/ci.yml`).
+precached file, run **`node tests/stamp-sw.js`** to refresh the service-worker
+asset hash (the offline cache name includes it, so caches bust automatically —
+and `validate` fails if you forget). CI runs everything on push
+(`.github/workflows/ci.yml`).
 
 ## Regenerating the icons
 

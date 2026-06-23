@@ -1,0 +1,15 @@
+{
+  "//": "Task runner + type-check config. No npm, no registry installs. Node runs the zero-dependency checks; Deno type-checks shared/plan-core.js with its own bundled TypeScript.",
+  "tasks": {
+    "syntax": "node tests/syntax-check.js",
+    "validate": "node tests/validate.js",
+    "test": "node --test tests/*.test.js",
+    "typecheck": "deno check shared/plan-core.js",
+    "stamp": "node tests/stamp-sw.js",
+    "check": "deno task syntax && deno task validate && deno task test && deno task typecheck"
+  },
+  "compilerOptions": {
+    "checkJs": true,
+    "lib": ["deno.ns", "dom", "es2020"]
+  }
+}
