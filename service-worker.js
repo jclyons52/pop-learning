@@ -1,0 +1,87 @@
+/* Pop Learning — service worker
+   Precaches the whole suite so it runs offline once installed. */
+"use strict";
+
+var VERSION = "pop-v1";
+var CACHE = "pop-cache-" + VERSION;
+
+// All paths are relative to this script (the repo root).
+var PRECACHE = [
+  "./",
+  "index.html",
+  "manifest.webmanifest",
+  "shared/pop.css",
+  "shared/pop.js",
+  "apps/alphabet-pop.html",
+  "apps/sight-words.html",
+  "apps/sound-it-out.html",
+  "apps/word-families.html",
+  "apps/counting-pop.html",
+  "icons/icon-192.png",
+  "icons/icon-512.png",
+  "icons/icon-180.png",
+  "icons/icon-maskable-512.png"
+];
+
+self.addEventListener("install", function (e) {
+  e.waitUntil(
+    caches.open(CACHE).then(function (cache) {
+      // best-effort: don't fail the whole install if one item 404s
+      return Promise.all(PRECACHE.map(function (url) {
+        return cache.add(new Request(url, { cache: "reload" })).catch(function () {});
+      }));
+    }).then(function () { return self.skipWaiting(); })
+  );
+});
+
+self.addEventListener("activate", function (e) {
+  e.waitUntil(
+    caches.keys().then(function (keys) {
+      return Promise.all(keys.map(function (k) {
+        if (k !== CACHE) return caches.delete(k);
+      }));
+    }).then(function () { return self.clients.claim(); })
+  );
+});
+
+self.addEventListener("fetch", function (e) {
+  var req = e.request;
+  if (req.method !== "GET") return;
+
+  var url = new URL(req.url);
+  var sameOrigin = url.origin === self.location.origin;
+
+  // App shell (same-origin): cache-first, fall back to network and cache it.
+  if (sameOrigin) {
+    e.respondWith(
+      caches.match(req).then(function (hit) {
+        if (hit) return hit;
+        return fetch(req).then(function (res) {
+          if (res && res.ok) {
+            var copy = res.clone();
+            caches.open(CACHE).then(function (c) { c.put(req, copy); });
+          }
+          return res;
+        }).catch(function () {
+          // offline navigation fallback -> the hub
+          if (req.mode === "navigate") return caches.match("index.html");
+        });
+      })
+    );
+    return;
+  }
+
+  // Cross-origin (e.g. Google Fonts): stale-while-revalidate.
+  e.respondWith(
+    caches.match(req).then(function (hit) {
+      var net = fetch(req).then(function (res) {
+        if (res && (res.ok || res.type === "opaque")) {
+          var copy = res.clone();
+          caches.open(CACHE).then(function (c) { c.put(req, copy); });
+        }
+        return res;
+      }).catch(function () { return hit; });
+      return hit || net;
+    })
+  );
+});

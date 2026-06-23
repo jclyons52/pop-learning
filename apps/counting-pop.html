@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Counting Pop · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  /* counting card is a touch taller to fit the objects */
+  #card{ aspect-ratio:1/1.12; }
+  .numeral{
+    color:#fff; font-weight:700; line-height:.9;
+    text-shadow:0 5px 0 rgba(0,0,0,.14);
+    font-size:clamp(3rem,16vw,5.5rem);
+  }
+  .dots{
+    display:flex; flex-wrap:wrap; gap:clamp(3px,1.2vw,7px);
+    justify-content:center; align-content:center;
+    max-width:90%; margin-top:8px;
+  }
+  .dot{
+    font-size:clamp(1.1rem,5vw,1.9rem); line-height:1;
+    transform:scale(.7); opacity:.55;
+    transition:transform .18s cubic-bezier(.34,1.56,.64,1), opacity .18s ease;
+  }
+  .dot.lit{ transform:scale(1.25); opacity:1; }
+  .dot.on{ transform:scale(1); opacity:1; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Counting&nbsp;<span>Pop</span></h1>
+        <p>Tap to count them out</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="shuffleBtn" aria-pressed="false" aria-label="Shuffle order">🔀 Shuffle</button>
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <button class="card" id="card" aria-label="Number card. Tap to count.">
+      <span class="numeral" id="numeral">1</span>
+      <div class="dots" id="dots"></div>
+    </button>
+    <div class="label"><span class="word" id="word">one</span></div>
+    <div class="tap-hint">👆 tap the card to count along</div>
+
+    <div class="nav">
+      <button class="arrow" id="prevBtn" aria-label="Previous number">←</button>
+      <button class="say" id="countBtn" aria-label="Count them">🔢 Count it</button>
+      <button class="arrow" id="nextBtn" aria-label="Next number">→</button>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="counter" id="counter">1 / 20</div>
+    <div class="progress"><i id="bar"></i></div>
+    <div class="rail" id="rail" aria-label="Jump to a number"></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+
+  var WORDS = ["one","two","three","four","five","six","seven","eight","nine","ten",
+    "eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty"];
+  var OBJECTS = ["🍎","⭐","🐟","🎈","🍓","🐤","🌸","🚗","🐞","🍊",
+    "🦋","🐠","🌼","🍇","🐧","🍪","🌟","🐬","🍉","🐝"];
+  var MAX = 20;
+
+  var order = WORDS.map(function(_,i){ return i; });  // index 0..19 -> number i+1
+  var pos = 0, shuffled = false, counting = false;
+  var card=$("card"), numeral=$("numeral"), dots=$("dots"), word=$("word"),
+      counter=$("counter"), bar=$("bar"), rail=$("rail");
+
+  for(var n=1; n<=MAX; n++){
+    (function(num){
+      var b = Pop.el("button", { text: String(num), "aria-label": "Go to " + num });
+      b.addEventListener("click", function(){ pos = order.indexOf(num-1); render(true); });
+      rail.appendChild(b);
+    })(n);
+  }
+  var railBtns = Array.prototype.slice.call(rail.children);
+
+  function num(){ return order[pos] + 1; }
+
+  function render(animate){
+    var value = num(), col = Pop.color(order[pos]), obj = OBJECTS[order[pos]];
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+    numeral.textContent = value;
+    word.textContent = WORDS[order[pos]];
+    dots.innerHTML = "";
+    for(var i=0;i<value;i++){
+      dots.appendChild(Pop.el("span", { "class":"dot", text: obj }));
+    }
+    counter.textContent = value + " / " + MAX;
+    bar.style.width = (value/MAX*100) + "%";
+    railBtns.forEach(function(b,i){
+      var on = ((i+1) === value);
+      b.classList.toggle("active", on);
+      b.style.background = on ? col[0] : "#fff";
+    });
+    if(animate){ card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop"); }
+  }
+
+  function count(){
+    if(counting) return;
+    counting = true;
+    var value = num();
+    var nodes = Array.prototype.slice.call(dots.children);
+    nodes.forEach(function(d){ d.classList.remove("on","lit"); });
+    var step = value <= 10 ? 480 : 320;
+    var seq = [];
+    nodes.forEach(function(d, i){
+      seq.push({ text: WORDS[i], gap: 40 });
+      setTimeout(function(){
+        d.classList.add("lit");
+        setTimeout(function(){ d.classList.remove("lit"); d.classList.add("on"); }, step*0.6);
+      }, i*step);
+    });
+    // after counting all, announce the total
+    setTimeout(function(){
+      Pop.speak(WORDS[order[pos]] + "!");
+      Pop.sparkle(card);
+      counting = false;
+    }, value*step + 200);
+    Pop.speakSeq(seq.map(function(s){ return { text:s.text, gap: step-220>60 ? step-220 : 90 }; }));
+  }
+
+  function go(dir){ pos = (pos + dir + MAX) % MAX; render(true); }
+
+  card.addEventListener("click", function(){
+    card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
+    count();
+  });
+  $("countBtn").addEventListener("click", count);
+  $("prevBtn").addEventListener("click", function(){ go(-1); });
+  $("nextBtn").addEventListener("click", function(){ go(1); });
+
+  $("shuffleBtn").addEventListener("click", function(){
+    shuffled = !shuffled;
+    this.setAttribute("aria-pressed", String(shuffled));
+    var currentIdx = order[pos];
+    if(shuffled){
+      order = Pop.shuffle(order);
+      if(order[0]===currentIdx && order.length>1){ var t=order[0]; order[0]=order[1]; order[1]=t; }
+      pos = 0;
+    }else{
+      order = WORDS.map(function(_,i){ return i; });
+      pos = order.indexOf(currentIdx);
+    }
+    render(true);
+  });
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  Pop.onArrows(function(){go(-1);}, function(){go(1);}, count);
+  render(false);
+})();
+</script>
+</body>
+</html>

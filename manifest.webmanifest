@@ -1,0 +1,18 @@
+{
+  "name": "Pop Learning",
+  "short_name": "Pop",
+  "description": "Fun phonics, sight-word, blending and counting games for kids learning to read.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF8EE",
+  "theme_color": "#FA5252",
+  "categories": ["education", "kids"],
+  "lang": "en-AU",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

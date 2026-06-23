@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Sound It Out · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  .tiles{ display:flex; gap:clamp(8px,2.5vw,14px); justify-content:center; }
+  .tile{
+    border:none; cursor:pointer;
+    width:clamp(58px,19vw,92px); aspect-ratio:1/1.1;
+    border-radius:20px; background:#fff; color:var(--ink);
+    font-family:var(--font); font-weight:700;
+    font-size:clamp(2.4rem,11vw,4rem); line-height:1;
+    display:grid; place-items:center;
+    box-shadow:0 7px 0 rgba(0,0,0,.16);
+    text-transform:lowercase;
+    transition:transform .1s ease, box-shadow .1s ease;
+  }
+  .tile:active,.tile.lit{ transform:translateY(6px); box-shadow:0 1px 0 rgba(0,0,0,.16); }
+  .tile.lit{ background:#FFD43B; }
+  .reveal{
+    margin-top:clamp(10px,3vh,22px);
+    display:flex; align-items:center; gap:12px;
+    opacity:0; transform:translateY(8px) scale(.9);
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  .reveal.show{ opacity:1; transform:none; }
+  .reveal .emoji{ font-size:clamp(2.4rem,11vw,3.6rem); }
+  .reveal .word{
+    background:var(--label); color:var(--ink);
+    border-radius:18px; padding:6px 16px;
+    font-size:clamp(1.3rem,6vw,2rem); font-weight:700; text-transform:lowercase;
+    box-shadow:0 5px 0 rgba(0,0,0,.10);
+  }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Sound&nbsp;It&nbsp;<span>Out</span></h1>
+        <p>Tap each sound, then blend</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="shuffleBtn" aria-pressed="false" aria-label="Shuffle order">🔀 Shuffle</button>
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="card" id="card" role="group" aria-label="Word tiles">
+      <div class="tiles" id="tiles"></div>
+    </div>
+    <div class="reveal" id="reveal">
+      <span class="emoji" id="emoji">🐱</span>
+      <span class="word" id="word">cat</span>
+    </div>
+    <div class="tap-hint">👆 tap a letter for its sound</div>
+
+    <div class="nav">
+      <button class="arrow" id="prevBtn" aria-label="Previous word">←</button>
+      <button class="say" id="blendBtn" aria-label="Blend the sounds">🪄 Blend it</button>
+      <button class="arrow" id="nextBtn" aria-label="Next word">→</button>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="counter" id="counter">1 / 18</div>
+    <div class="progress"><i id="bar"></i></div>
+    <div class="rail" id="rail" aria-label="Jump to a word"></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+
+  // letter -> spoken sound (approximate phonics for the speech engine)
+  var SOUNDS = {
+    a:"ah", b:"buh", c:"kuh", d:"duh", e:"eh", f:"ff", g:"guh", h:"huh",
+    i:"ih", j:"juh", k:"kuh", l:"ll", m:"mm", n:"nn", o:"o", p:"puh",
+    q:"kwuh", r:"rr", s:"sss", t:"tuh", u:"uh", v:"vv", w:"wuh", x:"ks",
+    y:"yuh", z:"zz"
+  };
+
+  var WORDS = [
+    ["cat","🐱"],["dog","🐶"],["pig","🐷"],["hat","🎩"],["sun","☀️"],["bus","🚌"],
+    ["cup","🥤"],["bed","🛏️"],["fox","🦊"],["box","📦"],["jam","🍓"],["bug","🐛"],
+    ["hen","🐔"],["web","🕸️"],["van","🚐"],["pot","🍲"],["map","🗺️"],["net","🥅"]
+  ];
+
+  var order = WORDS.map(function(_,i){ return i; });
+  var pos = 0, shuffled = false;
+  var card=$("card"), tilesEl=$("tiles"), reveal=$("reveal"),
+      emoji=$("emoji"), word=$("word"), counter=$("counter"), bar=$("bar"), rail=$("rail");
+
+  WORDS.forEach(function(w, idx){
+    var b = Pop.el("button", { text: w[0], "aria-label": "Go to " + w[0] });
+    b.addEventListener("click", function(){ pos = order.indexOf(idx); render(true); });
+    rail.appendChild(b);
+  });
+  var railBtns = Array.prototype.slice.call(rail.children);
+
+  function current(){ return WORDS[ order[pos] ]; }
+
+  function render(animate){
+    var w = current(), letters = w[0].split(""), col = Pop.color(order[pos]);
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+
+    tilesEl.innerHTML = "";
+    letters.forEach(function(ch){
+      var t = Pop.el("button", { "class":"tile", text: ch, "aria-label": "Sound for " + ch });
+      t.addEventListener("click", function(e){
+        e.stopPropagation();
+        lit(t); Pop.speak(SOUNDS[ch] || ch);
+      });
+      tilesEl.appendChild(t);
+    });
+
+    emoji.textContent = w[1];
+    word.textContent = w[0];
+    reveal.classList.remove("show");
+    counter.textContent = (pos+1) + " / " + WORDS.length;
+    bar.style.width = ((pos+1)/WORDS.length*100) + "%";
+    railBtns.forEach(function(b,i){
+      var on = (i === order[pos]);
+      b.classList.toggle("active", on);
+      b.style.background = on ? col[0] : "#fff";
+    });
+    if(animate){ card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop"); }
+  }
+
+  function lit(tile){
+    tile.classList.add("lit");
+    setTimeout(function(){ tile.classList.remove("lit"); }, 320);
+  }
+
+  function blend(){
+    var w = current(), letters = w[0].split("");
+    var tiles = Array.prototype.slice.call(tilesEl.children);
+    // audio: each sound with a gap, then the whole word
+    var seq = letters.map(function(ch, i){
+      return { text: SOUNDS[ch] || ch, gap: i < letters.length-1 ? 260 : 420 };
+    });
+    seq.push({ text: w[0], rate: 0.9 });
+    Pop.speakSeq(seq);
+    // visual: light each tile in time, then reveal
+    var step = 360;
+    tiles.forEach(function(t, i){ setTimeout(function(){ lit(t); }, i*step); });
+    setTimeout(function(){
+      reveal.classList.add("show");
+      Pop.sparkle(card);
+    }, letters.length*step + 120);
+  }
+
+  function go(dir){ pos = (pos + dir + WORDS.length) % WORDS.length; render(true); }
+
+  card.addEventListener("click", blend);
+  $("blendBtn").addEventListener("click", blend);
+  $("prevBtn").addEventListener("click", function(){ go(-1); });
+  $("nextBtn").addEventListener("click", function(){ go(1); });
+
+  $("shuffleBtn").addEventListener("click", function(){
+    shuffled = !shuffled;
+    this.setAttribute("aria-pressed", String(shuffled));
+    var currentIdx = order[pos];
+    if(shuffled){
+      order = Pop.shuffle(order);
+      if(order[0]===currentIdx && order.length>1){ var t=order[0]; order[0]=order[1]; order[1]=t; }
+      pos = 0;
+    }else{
+      order = WORDS.map(function(_,i){ return i; });
+      pos = order.indexOf(currentIdx);
+    }
+    render(true);
+  });
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  Pop.onArrows(function(){go(-1);}, function(){go(1);}, blend);
+  render(false);
+})();
+</script>
+</body>
+</html>

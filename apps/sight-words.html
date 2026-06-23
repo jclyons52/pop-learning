@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Sight Words · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  .bigword{
+    color:#fff; font-weight:700; line-height:.95;
+    text-shadow:0 5px 0 rgba(0,0,0,.14);
+    font-size:clamp(3.2rem, 17vw, 6rem);
+    text-transform:lowercase;
+    word-break:break-word; text-align:center;
+  }
+  .sentence{
+    margin-top:clamp(10px,3vh,22px);
+    background:var(--label); color:var(--ink);
+    border:none; font-family:var(--font);
+    border-radius:22px; padding:10px 18px;
+    font-size:clamp(.95rem,4vw,1.3rem); font-weight:600;
+    box-shadow:0 6px 0 rgba(0,0,0,.10); cursor:pointer; max-width:92%;
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .sentence b{ color:var(--pop); }
+  .sentence:active{ transform:translateY(4px); box-shadow:0 2px 0 rgba(0,0,0,.10); }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Sight&nbsp;<span>Words</span></h1>
+        <p>Words to know by heart</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="levelBtn" aria-label="Change word set">Set 1</button>
+      <button class="ctrl" id="shuffleBtn" aria-pressed="false" aria-label="Shuffle order">🔀 Shuffle</button>
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <button class="card" id="card" aria-label="Word card. Tap to hear it.">
+      <span class="bigword" id="bigword">the</span>
+    </button>
+    <button class="sentence" id="sentence" aria-label="Hear it in a sentence"></button>
+    <div class="tap-hint">👆 tap the word · 💬 tap the sentence</div>
+
+    <div class="nav">
+      <button class="arrow" id="prevBtn" aria-label="Previous word">←</button>
+      <button class="say" id="sayBtn" aria-label="Say the word">🔊 Say it</button>
+      <button class="arrow" id="nextBtn" aria-label="Next word">→</button>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="counter" id="counter">1 / 20</div>
+    <div class="progress"><i id="bar"></i></div>
+    <div class="rail" id="rail" aria-label="Jump to a word"></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+
+  // Australian "Magic Words" style high-frequency list, in three sets of 20.
+  var SETS = [
+    [ ["the","Pat the dog."],["I","I can run."],["a","I see a cat."],["to","Go to bed."],
+      ["and","Mum and Dad."],["is","It is hot."],["we","We can play."],["can","I can jump."],
+      ["see","I can see you."],["go","Let's go now."],["you","I like you."],["me","Look at me."],
+      ["my","This is my hat."],["up","Look up high."],["look","Look at the dog."],["it","It is fun."],
+      ["in","Get in the car."],["here","Come over here."],["play","Let's play now."],["like","I like cake."] ],
+    [ ["he","He is big."],["was","It was fun."],["are","We are happy."],["for","This is for you."],
+      ["little","A little mouse."],["they","They can run."],["said","Mum said yes."],["come","Come and play."],
+      ["big","A big red bus."],["down","Sit down here."],["on","Get on the bus."],["mum","I love Mum."],
+      ["dad","Dad is tall."],["went","We went home."],["at","Look at this."],["no","No, thank you."],
+      ["yes","Yes, please!"],["cat","The cat sat."],["dog","My dog can run."],["am","I am five."] ],
+    [ ["this","This is my book."],["us","Come with us."],["get","Get the ball."],["not","I can not see."],
+      ["too","Me too!"],["day","It is a sunny day."],["all","We ate it all."],["her","Give it to her."],
+      ["him","Give it to him."],["has","She has a hat."],["had","I had fun."],["out","Go out to play."],
+      ["will","I will help."],["one","I see one bird."],["two","I have two hands."],["three","Count to three."],
+      ["red","A red apple."],["blue","The blue sky."],["run","I can run fast."],["jump","Jump up high!"] ]
+  ];
+
+  var setIdx = 0, pos = 0, shuffled = false;
+  var order = [];
+  var card=$("card"), bigword=$("bigword"), sentenceEl=$("sentence"),
+      counter=$("counter"), bar=$("bar"), rail=$("rail");
+
+  function words(){ return SETS[setIdx]; }
+  function baseOrder(){ return words().map(function(_,i){ return i; }); }
+  function current(){ return words()[ order[pos] ]; }
+
+  function buildRail(){
+    rail.innerHTML = "";
+    words().forEach(function(w, idx){
+      var b = Pop.el("button", { text: w[0], "aria-label": "Go to " + w[0] });
+      b.addEventListener("click", function(){ pos = order.indexOf(idx); render(true); sayWord(); });
+      rail.appendChild(b);
+    });
+  }
+
+  function render(animate){
+    var w = current(), col = Pop.color(order[pos] + setIdx*3);
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+    bigword.textContent = w[0];
+    // bold the target word inside the sentence
+    var re = new RegExp("\\b" + w[0].replace(/[.*+?^${}()|[\]\\]/g,"\\$&") + "\\b", "i");
+    sentenceEl.innerHTML = "💬 " + w[1].replace(re, function(m){ return "<b>"+m+"</b>"; });
+    counter.textContent = (pos+1) + " / " + words().length;
+    bar.style.width = ((pos+1)/words().length*100) + "%";
+    var railBtns = Array.prototype.slice.call(rail.children);
+    railBtns.forEach(function(b,i){
+      var on = (i === order[pos]);
+      b.classList.toggle("active", on);
+      b.style.background = on ? col[0] : "#fff";
+    });
+    if(animate){ card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop"); }
+  }
+
+  function sayWord(){ Pop.speak(current()[0]); }
+  function saySentence(){ Pop.speak(current()[1]); }
+  function go(dir){ pos = (pos + dir + words().length) % words().length; render(true); sayWord(); }
+
+  function loadSet(animate){
+    order = shuffled ? Pop.shuffle(baseOrder()) : baseOrder();
+    pos = 0; buildRail(); render(animate);
+  }
+
+  card.addEventListener("click", function(){
+    card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
+    Pop.sparkle(card); sayWord();
+  });
+  sentenceEl.addEventListener("click", saySentence);
+  $("prevBtn").addEventListener("click", function(){ go(-1); });
+  $("nextBtn").addEventListener("click", function(){ go(1); });
+  $("sayBtn").addEventListener("click", function(){ Pop.sparkle(card); sayWord(); });
+
+  $("levelBtn").addEventListener("click", function(){
+    setIdx = (setIdx + 1) % SETS.length;
+    this.textContent = "Set " + (setIdx+1);
+    loadSet(true); sayWord();
+  });
+
+  $("shuffleBtn").addEventListener("click", function(){
+    shuffled = !shuffled;
+    this.setAttribute("aria-pressed", String(shuffled));
+    loadSet(true); if(shuffled) sayWord();
+  });
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  Pop.onArrows(function(){go(-1);}, function(){go(1);}, function(){ Pop.sparkle(card); sayWord(); });
+  loadSet(false);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Word Families · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  .tiles{ display:flex; gap:clamp(6px,2vw,12px); justify-content:center; align-items:center; }
+  .tile{
+    border:none; cursor:pointer;
+    min-width:clamp(54px,17vw,84px); aspect-ratio:1/1.1; padding:0 4px;
+    border-radius:20px; background:#fff; color:var(--ink);
+    font-family:var(--font); font-weight:700;
+    font-size:clamp(2.2rem,10vw,3.6rem); line-height:1;
+    display:grid; place-items:center; text-transform:lowercase;
+    box-shadow:0 7px 0 rgba(0,0,0,.16);
+    transition:transform .1s ease, box-shadow .1s ease, background .15s ease;
+  }
+  .tile.onset{ background:#FFD43B; }
+  .tile.rime{ width:auto; padding:0 clamp(10px,3vw,18px); }
+  .tile:active,.tile.lit{ transform:translateY(6px); box-shadow:0 1px 0 rgba(0,0,0,.16); }
+  .reveal{
+    margin-top:clamp(10px,3vh,22px);
+    display:flex; align-items:center; gap:12px;
+    opacity:0; transform:translateY(8px) scale(.9);
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  .reveal.show{ opacity:1; transform:none; }
+  .reveal .emoji{ font-size:clamp(2.4rem,11vw,3.6rem); }
+  .reveal .word{
+    background:var(--label); color:var(--ink);
+    border-radius:18px; padding:6px 16px;
+    font-size:clamp(1.3rem,6vw,2rem); font-weight:700; text-transform:lowercase;
+    box-shadow:0 5px 0 rgba(0,0,0,.10);
+  }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Word&nbsp;<span>Families</span></h1>
+        <p id="sub">The <b>-at</b> family</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="familyBtn" aria-label="Change word family">-at</button>
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <button class="card" id="card" aria-label="Word card. Tap to hear it.">
+      <div class="tiles" id="tiles"></div>
+    </button>
+    <div class="reveal" id="reveal">
+      <span class="emoji" id="emoji">🐱</span>
+      <span class="word" id="word">cat</span>
+    </div>
+    <div class="tap-hint">👆 the ending stays the same — only the first sound changes</div>
+
+    <div class="nav">
+      <button class="arrow" id="prevBtn" aria-label="Previous word">←</button>
+      <button class="say" id="sayBtn" aria-label="Say the word">🔊 Say it</button>
+      <button class="arrow" id="nextBtn" aria-label="Next word">→</button>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="counter" id="counter">1 / 4</div>
+    <div class="progress"><i id="bar"></i></div>
+    <div class="rail" id="rail" aria-label="Jump to a word"></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+
+  // each family: rime + list of [onset, full word, emoji]
+  var FAMILIES = [
+    { rime:"at", words:[ ["c","cat","🐱"],["h","hat","🎩"],["b","bat","🦇"],["r","rat","🐀"] ] },
+    { rime:"an", words:[ ["p","pan","🍳"],["v","van","🚐"],["c","can","🥫"],["f","fan","🪭"] ] },
+    { rime:"ig", words:[ ["p","pig","🐷"],["w","wig","💇"],["d","dig","⛏️"],["f","fig","🟣"] ] },
+    { rime:"og", words:[ ["d","dog","🐶"],["l","log","🪵"],["f","fog","🌫️"],["j","jog","🏃"] ] },
+    { rime:"en", words:[ ["h","hen","🐔"],["p","pen","🖊️"],["t","ten","🔟"],["m","men","👬"] ] },
+    { rime:"un", words:[ ["s","sun","☀️"],["b","bun","🍞"],["r","run","🏃"],["f","fun","🎉"] ] }
+  ];
+
+  var famIdx = 0, pos = 0;
+  var card=$("card"), tilesEl=$("tiles"), reveal=$("reveal"), emoji=$("emoji"),
+      word=$("word"), counter=$("counter"), bar=$("bar"), rail=$("rail"), sub=$("sub");
+
+  function family(){ return FAMILIES[famIdx]; }
+  function current(){ return family().words[pos]; }
+
+  function buildRail(){
+    rail.innerHTML = "";
+    family().words.forEach(function(w, idx){
+      var b = Pop.el("button", { text: w[1], "aria-label": "Go to " + w[1] });
+      b.addEventListener("click", function(){ pos = idx; render(true); say(); });
+      rail.appendChild(b);
+    });
+  }
+
+  function render(animate){
+    var fam = family(), w = current(), col = Pop.color(pos + famIdx*2);
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+
+    tilesEl.innerHTML = "";
+    var onset = Pop.el("button", { "class":"tile onset", text: w[0], "aria-label":"First sound" });
+    onset.addEventListener("click", function(e){ e.stopPropagation(); flash(onset); Pop.speak(soundFor(w[0])); });
+    var rime = Pop.el("button", { "class":"tile rime", text: fam.rime, "aria-label":"Word ending" });
+    rime.addEventListener("click", function(e){ e.stopPropagation(); flash(rime); Pop.speak(fam.rime); });
+    tilesEl.appendChild(onset); tilesEl.appendChild(rime);
+
+    emoji.textContent = w[2];
+    word.textContent = w[1];
+    reveal.classList.remove("show");
+    sub.innerHTML = "The <b>-" + fam.rime + "</b> family";
+    counter.textContent = (pos+1) + " / " + fam.words.length;
+    bar.style.width = ((pos+1)/fam.words.length*100) + "%";
+    var railBtns = Array.prototype.slice.call(rail.children);
+    railBtns.forEach(function(b,i){
+      var on = (i === pos);
+      b.classList.toggle("active", on);
+      b.style.background = on ? col[0] : "#fff";
+    });
+    if(animate){ card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop"); }
+  }
+
+  var ONSET_SOUNDS = { b:"buh",c:"kuh",d:"duh",f:"ff",g:"guh",h:"huh",j:"juh",l:"ll",
+    m:"mm",n:"nn",p:"puh",r:"rr",s:"sss",t:"tuh",v:"vv",w:"wuh",y:"yuh",z:"zz" };
+  function soundFor(ch){ return ONSET_SOUNDS[ch] || ch; }
+
+  function flash(t){ t.classList.add("lit"); setTimeout(function(){ t.classList.remove("lit"); }, 320); }
+
+  function say(){
+    var w = current();
+    Pop.speak(w[1]);
+    reveal.classList.add("show");
+  }
+  function go(dir){ var n = family().words.length; pos = (pos + dir + n) % n; render(true); say(); }
+
+  card.addEventListener("click", function(){
+    card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
+    Pop.sparkle(card); say();
+  });
+  $("prevBtn").addEventListener("click", function(){ go(-1); });
+  $("nextBtn").addEventListener("click", function(){ go(1); });
+  $("sayBtn").addEventListener("click", function(){ Pop.sparkle(card); say(); });
+
+  $("familyBtn").addEventListener("click", function(){
+    famIdx = (famIdx + 1) % FAMILIES.length;
+    this.textContent = "-" + family().rime;
+    pos = 0; buildRail(); render(true); say();
+  });
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  Pop.onArrows(function(){go(-1);}, function(){go(1);}, function(){ Pop.sparkle(card); say(); });
+  buildRail(); render(false);
+})();
+</script>
+</body>
+</html>

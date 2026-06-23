@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Alphabet Pop · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  .glyphs{
+    display:flex; align-items:baseline; justify-content:center; gap:.06em;
+    color:#fff; text-shadow:0 5px 0 rgba(0,0,0,.14); line-height:.9;
+  }
+  .glyph-up{ font-size:clamp(5rem, 26vw, 9.5rem); font-weight:700; }
+  .glyph-low{ font-size:clamp(3rem, 15vw, 5.5rem); font-weight:600; opacity:.92; }
+  .glyphs.single .glyph-low{ display:none; }
+  .glyphs.lower-only .glyph-up{ display:none; }
+  .glyphs.lower-only .glyph-low{ font-size:clamp(5rem,26vw,9.5rem); font-weight:700; opacity:1; }
+  .label .word{ text-transform:lowercase; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Alphabet&nbsp;<span>Pop</span></h1>
+        <p>Tap the card to hear it</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="caseBtn" aria-label="Change letter case">Aa</button>
+      <button class="ctrl" id="shuffleBtn" aria-pressed="false" aria-label="Shuffle order">🔀 Shuffle</button>
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <button class="card" id="card" aria-label="Letter card. Tap to hear.">
+      <div class="glyphs" id="glyphs">
+        <span class="glyph-up" id="glyphUp">A</span>
+        <span class="glyph-low" id="glyphLow">a</span>
+      </div>
+      <div class="label">
+        <span class="emoji" id="emoji">🍎</span>
+        <span class="word" id="word">apple</span>
+      </div>
+    </button>
+    <div class="tap-hint">👆 tap the block to listen</div>
+
+    <div class="nav">
+      <button class="arrow" id="prevBtn" aria-label="Previous letter">←</button>
+      <button class="say" id="sayBtn" aria-label="Say the letter">🔊 Say it</button>
+      <button class="arrow" id="nextBtn" aria-label="Next letter">→</button>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="counter" id="counter">1 / 26</div>
+    <div class="progress"><i id="bar"></i></div>
+    <div class="rail" id="rail" aria-label="Jump to a letter"></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+
+  var LETTERS = [
+    ["A","apple","🍎"],["B","ball","⚽"],["C","cat","🐱"],["D","dog","🐶"],
+    ["E","egg","🥚"],["F","fish","🐟"],["G","goat","🐐"],["H","hat","🎩"],
+    ["I","insect","🐜"],["J","juice","🧃"],["K","kite","🪁"],["L","lion","🦁"],
+    ["M","moon","🌙"],["N","nest","🪺"],["O","orange","🍊"],["P","pig","🐷"],
+    ["Q","queen","👑"],["R","rabbit","🐰"],["S","snake","🐍"],["T","tree","🌳"],
+    ["U","umbrella","☂️"],["V","van","🚐"],["W","web","🕸️"],["X","fox","🦊"],
+    ["Y","yo-yo","🪀"],["Z","zebra","🦓"]
+  ];
+
+  var order = LETTERS.map(function(_,i){ return i; });
+  var pos = 0, caseMode = 0, shuffled = false;
+
+  var card=$("card"), glyphs=$("glyphs"), gUp=$("glyphUp"), gLow=$("glyphLow"),
+      emoji=$("emoji"), word=$("word"), counter=$("counter"), bar=$("bar"), rail=$("rail");
+
+  LETTERS.forEach(function(l, idx){
+    var b = Pop.el("button", { text: l[0], "aria-label": "Go to letter " + l[0] });
+    b.addEventListener("click", function(){ pos = order.indexOf(idx); render(true); sayCurrent(); });
+    rail.appendChild(b);
+  });
+  var railBtns = Array.prototype.slice.call(rail.children);
+
+  function current(){ return LETTERS[ order[pos] ]; }
+
+  function render(animate){
+    var L = current(), col = Pop.color(order[pos]);
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+    gUp.textContent = L[0];
+    gLow.textContent = L[0].toLowerCase();
+    emoji.textContent = L[2];
+    word.textContent = L[1];
+    glyphs.className = "glyphs" + (caseMode===1 ? " single" : caseMode===2 ? " lower-only" : "");
+    counter.textContent = (pos+1) + " / " + LETTERS.length;
+    bar.style.width = ((pos+1)/LETTERS.length*100) + "%";
+    railBtns.forEach(function(b,i){
+      var on = (i === order[pos]);
+      b.classList.toggle("active", on);
+      b.style.background = on ? col[0] : "#fff";
+    });
+    if(animate){ card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop"); }
+  }
+
+  function sayCurrent(){ var L = current(); Pop.speak(L[0] + " for " + L[1] + "."); }
+  function go(dir){ pos = (pos + dir + LETTERS.length) % LETTERS.length; render(true); sayCurrent(); }
+
+  card.addEventListener("click", function(){
+    card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
+    Pop.sparkle(card); sayCurrent();
+  });
+  $("prevBtn").addEventListener("click", function(){ go(-1); });
+  $("nextBtn").addEventListener("click", function(){ go(1); });
+  $("sayBtn").addEventListener("click", function(){ Pop.sparkle(card); sayCurrent(); });
+
+  $("caseBtn").addEventListener("click", function(){
+    caseMode = (caseMode + 1) % 3;
+    this.textContent = caseMode===0 ? "Aa" : caseMode===1 ? "A" : "a";
+    render(false);
+  });
+
+  $("shuffleBtn").addEventListener("click", function(){
+    shuffled = !shuffled;
+    this.setAttribute("aria-pressed", String(shuffled));
+    var currentIdx = order[pos];
+    if(shuffled){
+      order = Pop.shuffle(order);
+      if(order[0] === currentIdx && order.length>1){ var t=order[0]; order[0]=order[1]; order[1]=t; }
+      pos = 0; render(true); sayCurrent();
+    }else{
+      order = LETTERS.map(function(_,i){ return i; });
+      pos = order.indexOf(currentIdx); render(true);
+    }
+  });
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  Pop.onArrows(function(){go(-1);}, function(){go(1);}, function(){ Pop.sparkle(card); sayCurrent(); });
+  render(false);
+})();
+</script>
+</body>
+</html>
