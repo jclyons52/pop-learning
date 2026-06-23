@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Spell It · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  /* prompt card: emoji clue + replay button */
+  #card{ aspect-ratio:1/0.82; gap:6px; }
+  .prompt-emoji{ font-size:clamp(3.4rem,18vw,6rem); line-height:1; }
+  .prompt-say{
+    margin-top:6px; border:none; cursor:pointer;
+    background:rgba(255,255,255,.92); color:var(--ink);
+    font-family:var(--font); font-weight:700; font-size:clamp(.95rem,4vw,1.2rem);
+    border-radius:999px; padding:9px 18px; box-shadow:0 4px 0 rgba(0,0,0,.14);
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .prompt-say:active{ transform:translateY(4px); box-shadow:0 0 0 rgba(0,0,0,.14); }
+
+  /* the letter slots that get filled */
+  .slots{ display:flex; gap:clamp(8px,3vw,14px); justify-content:center; }
+  .slot{
+    width:clamp(56px,18vw,86px); aspect-ratio:1/1.1;
+    border-radius:20px; background:#fff; color:var(--ink);
+    font-family:var(--font); font-weight:700; text-transform:lowercase;
+    font-size:clamp(2.2rem,10vw,3.4rem); line-height:1;
+    display:grid; place-items:center;
+    box-shadow:inset 0 0 0 3px #EFE3CE;
+    transition:background .15s ease, box-shadow .15s ease, transform .1s ease;
+  }
+  .slot.filled{ box-shadow:0 6px 0 rgba(0,0,0,.12); }
+  .slot.good{ background:#37B24D; color:#fff; box-shadow:0 6px 0 #2B8A3E; animation:pop .42s cubic-bezier(.34,1.56,.64,1); }
+  .slots.bad .slot{ animation:shake .4s; }
+  @keyframes shake{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-7px); } 40%{ transform:translateX(7px); } 60%{ transform:translateX(-5px); } 80%{ transform:translateX(5px); } }
+
+  /* the tappable bank of letters */
+  .bank{
+    display:flex; flex-wrap:wrap; gap:clamp(8px,2.5vw,12px); justify-content:center;
+    width:min(92vw, 460px);
+  }
+  .banktile{
+    border:none; cursor:pointer;
+    width:clamp(52px,15vw,72px); aspect-ratio:1/1.1;
+    border-radius:18px; background:#fff; color:var(--ink);
+    font-family:var(--font); font-weight:700; text-transform:lowercase;
+    font-size:clamp(1.9rem,8vw,2.8rem); line-height:1;
+    display:grid; place-items:center;
+    box-shadow:0 6px 0 rgba(0,0,0,.16);
+    transition:transform .1s ease, box-shadow .1s ease, opacity .15s ease;
+  }
+  .banktile:active{ transform:translateY(5px); box-shadow:0 1px 0 rgba(0,0,0,.16); }
+  .banktile:focus-visible{ outline:3px solid #4DABF7; outline-offset:2px; }
+  .banktile.used{ opacity:.28; pointer-events:none; }
+
+  .tools{ display:flex; gap:clamp(10px,4vw,18px); align-items:center; }
+  .tool{
+    border:none; cursor:pointer;
+    background:#fff; color:var(--ink);
+    font-family:var(--font); font-weight:700; font-size:clamp(.95rem,4vw,1.15rem);
+    border-radius:999px; padding:11px 20px; box-shadow:0 5px 0 var(--shadow);
+    display:inline-flex; align-items:center; gap:8px;
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .tool:active{ transform:translateY(5px); box-shadow:0 0 0 var(--shadow); }
+  .tool:focus-visible{ outline:3px solid #4DABF7; outline-offset:2px; }
+
+  .scorebar{ display:flex; align-items:center; gap:16px; font-weight:600; }
+  .score{ font-size:1rem; color:var(--ink); }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Spell&nbsp;<span>It</span></h1>
+        <p>Build the word you hear</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="shuffleBtn" aria-pressed="false" aria-label="Shuffle order">🔀 Shuffle</button>
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <button class="card" id="card" aria-label="Hear the word again">
+      <span class="prompt-emoji" id="promptEmoji">🐱</span>
+      <span class="prompt-say">🔊 Hear it</span>
+    </button>
+    <div class="slots" id="slots" aria-label="Letter slots"></div>
+    <div class="bank" id="bank" aria-label="Letter bank"></div>
+    <div class="tools">
+      <button class="tool" id="clearBtn" aria-label="Clear the letters">⌫ Clear</button>
+      <button class="tool" id="hearBtn" aria-label="Hear the word">🔊 Hear it</button>
+    </div>
+
+    <div class="nav">
+      <button class="arrow" id="prevBtn" aria-label="Previous word">←</button>
+      <button class="arrow" id="nextBtn" aria-label="Next word">→</button>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="scorebar">
+      <span class="score" id="score">⭐ 0</span>
+      <span class="counter" id="counter">1 / 18</span>
+    </div>
+    <div class="progress"><i id="bar"></i></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script src="../shared/data.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+  var WORDS = Pop.data.cvc;
+  var SOUNDS = Pop.data.sounds;
+  var ALPHA = "abcdefghijklmnopqrstuvwxyz".split("");
+
+  var order = WORDS.map(function(_,i){ return i; });
+  var pos = 0, score = 0, shuffled = false, locked = false;
+  var filled = [];   // letters placed so far
+
+  var card=$("card"), promptEmoji=$("promptEmoji"), slotsEl=$("slots"),
+      bankEl=$("bank"), scoreEl=$("score"), counter=$("counter"), bar=$("bar");
+
+  function current(){ return WORDS[ order[pos] ]; }
+
+  function speakWord(){ Pop.speak(current()[0]); }
+
+  function buildBank(letters){
+    // word's letters plus 2 random extras not already in the word
+    var pool = letters.slice();
+    var extras = Pop.shuffle(ALPHA.filter(function(c){ return letters.indexOf(c) === -1; })).slice(0,2);
+    return Pop.shuffle(pool.concat(extras));
+  }
+
+  function newRound(animate){
+    locked = false;
+    filled = [];
+    var w = current(), letters = w[0].split(""), col = Pop.color(order[pos]);
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+    promptEmoji.textContent = w[1];
+
+    // empty slots, one per letter
+    slotsEl.className = "slots";
+    slotsEl.innerHTML = "";
+    letters.forEach(function(){
+      slotsEl.appendChild(Pop.el("div", { "class":"slot" }));
+    });
+
+    // bank of tappable tiles
+    bankEl.innerHTML = "";
+    buildBank(letters).forEach(function(ch){
+      var b = Pop.el("button", { "class":"banktile", text: ch, "aria-label": "Letter " + ch });
+      b.addEventListener("click", function(){ place(b, ch); });
+      bankEl.appendChild(b);
+    });
+
+    counter.textContent = (pos+1) + " / " + WORDS.length;
+    bar.style.width = ((pos+1)/WORDS.length*100) + "%";
+    if(animate){ card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop"); }
+    setTimeout(speakWord, 280);
+  }
+
+  function place(btn, ch){
+    if(locked) return;
+    var slots = Array.prototype.slice.call(slotsEl.children);
+    if(filled.length >= slots.length) return;
+    var slot = slots[filled.length];
+    slot.textContent = ch;
+    slot.classList.add("filled");
+    filled.push(ch);
+    btn.classList.add("used");
+    Pop.speak(SOUNDS[ch] || ch);
+    if(filled.length === slots.length) check();
+  }
+
+  function check(){
+    var w = current(), spelled = filled.join("");
+    var correct = (spelled === w[0]);
+    Pop.progress.record("spell", w[0], correct);
+    var slots = Array.prototype.slice.call(slotsEl.children);
+    if(correct){
+      locked = true;
+      slots.forEach(function(s){ s.classList.add("good"); });
+      Pop.sparkle(card);
+      score++; scoreEl.textContent = "⭐ " + score;
+      Pop.speak("Yes! " + w[0] + "!");
+      setTimeout(function(){ go(1); }, 1100);
+    } else {
+      locked = true;
+      slotsEl.classList.add("bad");
+      Pop.speak("Try again.");
+      setTimeout(function(){ slotsEl.classList.remove("bad"); clear(); }, 700);
+    }
+  }
+
+  function clear(){
+    locked = false;
+    filled = [];
+    Array.prototype.slice.call(slotsEl.children).forEach(function(s){
+      s.textContent = ""; s.classList.remove("filled","good");
+    });
+    Array.prototype.slice.call(bankEl.children).forEach(function(b){
+      b.classList.remove("used");
+    });
+  }
+
+  function go(dir){ pos = (pos + dir + WORDS.length) % WORDS.length; newRound(true); }
+
+  card.addEventListener("click", speakWord);
+  $("hearBtn").addEventListener("click", speakWord);
+  $("clearBtn").addEventListener("click", clear);
+  $("prevBtn").addEventListener("click", function(){ go(-1); });
+  $("nextBtn").addEventListener("click", function(){ go(1); });
+
+  $("shuffleBtn").addEventListener("click", function(){
+    shuffled = !shuffled;
+    this.setAttribute("aria-pressed", String(shuffled));
+    var currentIdx = order[pos];
+    if(shuffled){
+      order = Pop.shuffle(order);
+      if(order[0]===currentIdx && order.length>1){ var t=order[0]; order[0]=order[1]; order[1]=t; }
+      pos = 0;
+    }else{
+      order = WORDS.map(function(_,i){ return i; });
+      pos = order.indexOf(currentIdx);
+    }
+    newRound(true);
+  });
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  Pop.onArrows(function(){go(-1);}, function(){go(1);}, speakWord);
+  newRound(false);
+})();
+</script>
+</body>
+</html>

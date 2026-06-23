@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Speed Words · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  /* word card: one big lowercase sight word */
+  #card{ aspect-ratio:1/0.78; gap:10px; }
+  .bigword{
+    font-size:clamp(3rem,16vw,5.4rem); line-height:1;
+    font-weight:700; text-transform:lowercase; color:#fff;
+    letter-spacing:1px;
+    text-shadow:0 3px 0 rgba(0,0,0,.14);
+  }
+  .startbtn{
+    border:none; cursor:pointer;
+    background:#fff; color:var(--ink);
+    font-family:var(--font); font-weight:700; font-size:clamp(1.4rem,7vw,2rem);
+    border-radius:999px; padding:14px 30px; box-shadow:0 6px 0 rgba(0,0,0,.16);
+    display:inline-flex; align-items:center; gap:10px;
+  }
+  .startbtn:active{ transform:translateY(5px); box-shadow:0 1px 0 rgba(0,0,0,.16); }
+  .endmsg{
+    color:#fff; text-align:center;
+    text-shadow:0 3px 0 rgba(0,0,0,.14);
+  }
+  .endmsg .big{ font-size:clamp(2rem,9vw,3rem); font-weight:700; line-height:1.1; }
+  .endmsg .sub{ font-size:clamp(1rem,4.4vw,1.3rem); font-weight:600; margin-top:6px; }
+
+  .actions{ display:flex; gap:clamp(10px,4vw,18px); align-items:center; }
+  .act{
+    border:none; cursor:pointer;
+    font-family:var(--font); font-weight:700; font-size:clamp(1.05rem,4.6vw,1.4rem);
+    border-radius:999px; padding:14px 26px;
+    display:inline-flex; align-items:center; gap:8px;
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .act:active{ transform:translateY(5px); }
+  .act:focus-visible{ outline:3px solid #4DABF7; outline-offset:2px; }
+  .act.got{ background:#37B24D; color:#fff; box-shadow:0 6px 0 #2B8A3E; }
+  .act.got:active{ box-shadow:0 1px 0 #2B8A3E; }
+  .act.skip{ background:#fff; color:var(--ink); box-shadow:0 6px 0 var(--shadow); }
+  .act.skip:active{ box-shadow:0 1px 0 var(--shadow); }
+  .act[disabled]{ opacity:.4; pointer-events:none; }
+
+  .timerbar{ display:flex; align-items:center; gap:18px; font-weight:700; }
+  .timer{ font-size:1.15rem; color:var(--ink); display:inline-flex; align-items:center; gap:6px; }
+  .timer.low{ color:var(--pop); }
+  .count{ font-size:1.15rem; color:var(--ink); display:inline-flex; align-items:center; gap:6px; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Speed&nbsp;<span>Words</span></h1>
+        <p>How many can you read?</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <button class="card" id="card" aria-label="Speed words game">
+      <span class="startbtn" id="startBtn">▶ Start</span>
+    </button>
+
+    <div class="actions" id="actions" style="visibility:hidden;">
+      <button class="act got" id="gotBtn" aria-label="Got it">✓ Got it</button>
+      <button class="act skip" id="skipBtn" aria-label="Skip">↷ Skip</button>
+    </div>
+    <div class="tap-hint" id="hint">👆 press start, then read each word out loud!</div>
+  </main>
+
+  <footer class="bottom">
+    <div class="timerbar">
+      <span class="timer" id="timer">⏱ 60</span>
+      <span class="count" id="count">⭐ 0</span>
+    </div>
+    <div class="progress"><i id="bar"></i></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script src="../shared/data.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+  var DURATION = 60;
+
+  // pool = every sight word, flattened from the sets (take the word, drop the sentence)
+  var POOL = [];
+  Pop.data.sightSets.forEach(function(set){
+    set.forEach(function(entry){ POOL.push(entry[0]); });
+  });
+
+  var card=$("card"), startBtn=$("startBtn"), actions=$("actions"),
+      gotBtn=$("gotBtn"), skipBtn=$("skipBtn"), hint=$("hint"),
+      timerEl=$("timer"), countEl=$("count"), bar=$("bar");
+
+  var running = false, timeLeft = DURATION, count = 0, queue = [], qi = 0, ticker = null;
+
+  function setCardColor(i){
+    var col = Pop.color(i);
+    card.style.setProperty("--c", col[0]);
+    card.style.setProperty("--c-dark", col[1]);
+  }
+
+  function showWord(){
+    if(qi >= queue.length){ queue = Pop.shuffle(POOL); qi = 0; }
+    var w = queue[qi++];
+    setCardColor(qi);
+    card.innerHTML = '<span class="bigword">' + w + '</span>';
+    card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
+  }
+
+  function tick(){
+    timeLeft--;
+    timerEl.textContent = "⏱ " + timeLeft;
+    timerEl.classList.toggle("low", timeLeft <= 10);
+    bar.style.width = (timeLeft/DURATION*100) + "%";
+    if(timeLeft <= 0) end();
+  }
+
+  function start(){
+    if(running) return;          // guard against double-starts
+    running = true;
+    count = 0; timeLeft = DURATION; queue = Pop.shuffle(POOL); qi = 0;
+    countEl.textContent = "⭐ 0";
+    timerEl.textContent = "⏱ " + DURATION;
+    timerEl.classList.remove("low");
+    bar.style.width = "100%";
+    actions.style.visibility = "visible";
+    gotBtn.disabled = skipBtn.disabled = false;
+    hint.textContent = "👆 read the word, then tap got it or skip!";
+    showWord();
+    if(ticker){ clearInterval(ticker); }
+    ticker = setInterval(tick, 1000);
+  }
+
+  function got(){
+    if(!running) return;
+    count++; countEl.textContent = "⭐ " + count;
+    Pop.progress.record("speed", queue[qi-1], true);
+    Pop.sparkle(card);
+    showWord();
+  }
+
+  function skip(){
+    if(!running) return;
+    showWord();
+  }
+
+  function end(){
+    running = false;
+    if(ticker){ clearInterval(ticker); ticker = null; }
+    timerEl.textContent = "⏱ 0";
+    timerEl.classList.remove("low");
+    bar.style.width = "0%";
+    actions.style.visibility = "hidden";
+    gotBtn.disabled = skipBtn.disabled = true;
+    setCardColor(3);
+    card.innerHTML =
+      '<div class="endmsg"><div class="big">you read</div>' +
+      '<div class="big">' + count + (count===1 ? ' word!' : ' words!') + '</div>' +
+      '<div class="sub">tap to play again</div></div>';
+    card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
+    hint.textContent = "🎉 great reading!";
+    Pop.speak(count===0 ? "Good try! Let's play again." :
+      "Wow! You read " + count + (count===1 ? " word!" : " words!"));
+  }
+
+  function showStart(){
+    setCardColor(5);
+    card.innerHTML = '<span class="startbtn">▶ Start</span>';
+  }
+
+  // tapping the card: start if idle, else (when finished) restart
+  card.addEventListener("click", function(){
+    if(!running) start();
+  });
+
+  gotBtn.addEventListener("click", function(e){ e.stopPropagation(); got(); });
+  skipBtn.addEventListener("click", function(e){ e.stopPropagation(); skip(); });
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  // initial state
+  timerEl.textContent = "⏱ " + DURATION;
+  bar.style.width = "0%";
+  setCardColor(5);
+})();
+</script>
+</body>
+</html>
