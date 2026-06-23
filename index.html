@@ -4,55 +4,51 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Pop Learning · fun reading & counting for little kids</title>
-<meta name="description" content="A friendly set of phonics, sight-word, blending and counting games for kids learning to read. Free, works offline, installs as an app." />
+<meta name="description" content="A friendly set of phonics, sight-word, blending, reading and counting games for kids learning to read. Free, works offline, installs as an app." />
 <link rel="stylesheet" href="shared/pop.css" />
 <style>
   .hero{ text-align:center; padding:clamp(22px,6vh,48px) 18px 6px; }
-  .hero h1{
-    margin:0; font-weight:700; letter-spacing:.5px;
-    font-size:clamp(2.1rem,9vw,3.4rem);
-  }
+  .hero h1{ margin:0; font-weight:700; letter-spacing:.5px; font-size:clamp(2.1rem,9vw,3.4rem); }
   .hero h1 span{ color:var(--pop); }
   .hero p{ margin:8px 0 0; color:var(--ink-soft); font-weight:500; font-size:clamp(.95rem,3.6vw,1.15rem); }
 
+  main{ flex:1; width:min(96vw, 960px); margin:clamp(14px,3vh,28px) auto 0; padding:0 18px; }
+  .cat{
+    margin:clamp(20px,4vh,30px) 4px 12px;
+    font-size:clamp(1.05rem,4.4vw,1.35rem); font-weight:700; color:var(--ink);
+    display:flex; align-items:center; gap:9px;
+  }
+  .cat span{ font-size:1.2em; }
   .grid{
-    flex:1;
     display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(min(100%, 250px), 1fr));
-    gap:clamp(14px,3vw,22px);
-    width:min(96vw, 920px);
-    margin:clamp(18px,4vh,34px) auto;
-    padding:0 18px calc(18px + env(safe-area-inset-bottom));
-    align-content:start;
+    grid-template-columns:repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+    gap:clamp(12px,2.6vw,18px);
   }
   .tile{
-    text-decoration:none;
-    border-radius:30px;
-    background:var(--c);
-    box-shadow:0 12px 0 var(--c-dark), 0 22px 34px rgba(43,36,64,.24);
-    color:#fff;
-    padding:22px 22px 26px;
-    display:flex; flex-direction:column; gap:8px;
-    min-height:168px;
+    text-decoration:none; border-radius:26px;
+    background:var(--c); box-shadow:0 10px 0 var(--c-dark), 0 18px 28px rgba(43,36,64,.2);
+    color:#fff; padding:18px 18px 20px;
+    display:flex; flex-direction:column; gap:6px; min-height:148px;
     transition:transform .1s ease, box-shadow .1s ease;
   }
-  .tile:active{ transform:translateY(9px); box-shadow:0 3px 0 var(--c-dark), 0 10px 18px rgba(43,36,64,.2); }
+  .tile:active{ transform:translateY(8px); box-shadow:0 2px 0 var(--c-dark), 0 8px 14px rgba(43,36,64,.18); }
   .tile:focus-visible{ outline:4px solid var(--ink); outline-offset:4px; }
-  .tile .ico{ font-size:clamp(2.6rem,12vw,3.4rem); line-height:1; }
-  .tile .name{ font-size:clamp(1.25rem,5.5vw,1.6rem); font-weight:700; }
-  .tile .desc{ font-size:.95rem; font-weight:500; opacity:.92; line-height:1.25; }
-  .tile .go{ margin-top:auto; font-weight:600; font-size:.9rem; opacity:.92; }
+  .tile .ico{ font-size:clamp(2.2rem,10vw,2.9rem); line-height:1; }
+  .tile .name{ font-size:clamp(1.15rem,5vw,1.4rem); font-weight:700; }
+  .tile .desc{ font-size:.9rem; font-weight:500; opacity:.93; line-height:1.25; }
+  .tile .go{ margin-top:auto; font-weight:600; font-size:.85rem; opacity:.92; }
 
-  .footer{ text-align:center; padding:0 18px calc(22px + env(safe-area-inset-bottom)); color:var(--ink-soft); }
-  .installRow{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; min-height:0; }
-  .install{
-    border:none; cursor:pointer; font-family:var(--font); font-weight:700;
+  .footer{ text-align:center; padding:clamp(20px,5vh,40px) 18px calc(22px + env(safe-area-inset-bottom)); color:var(--ink-soft); }
+  .footer-actions{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .pill{
+    border:none; cursor:pointer; font-family:var(--font); font-weight:700; text-decoration:none;
     background:#fff; color:var(--ink); border-radius:999px;
     padding:11px 20px; font-size:.95rem; box-shadow:0 4px 0 var(--shadow);
-    display:none; align-items:center; gap:8px;
+    display:inline-flex; align-items:center; gap:8px;
     transition:transform .08s ease, box-shadow .08s ease;
   }
-  .install:active{ transform:translateY(4px); box-shadow:0 0 0 var(--shadow); }
+  .pill:active{ transform:translateY(4px); box-shadow:0 0 0 var(--shadow); }
+  .install{ display:none; }
   .ios-hint{ font-size:.85rem; max-width:30rem; margin:0 auto; line-height:1.35; }
   .credit{ font-size:.8rem; margin-top:10px; }
 </style>
@@ -63,11 +59,12 @@
     <p>Tap, listen, learn — little games for early readers 🦉</p>
   </header>
 
-  <main class="grid" id="grid" aria-label="Choose a game"></main>
+  <main id="main" aria-label="Choose a game"></main>
 
   <footer class="footer">
-    <div class="installRow">
-      <button class="install" id="installBtn">⬇️ Install as an app</button>
+    <div class="footer-actions">
+      <button class="pill install" id="installBtn">⬇️ Install as an app</button>
+      <a class="pill" href="parent.html">👩‍👧 Grown-up Corner</a>
     </div>
     <p class="ios-hint" id="iosHint" hidden>On iPhone/iPad: tap the <b>Share</b> button, then <b>Add to Home Screen</b> to install.</p>
     <p class="credit">Works offline · no ads · no sign-up. Made with ❤️ for little learners.</p>
@@ -77,26 +74,60 @@
 <script>
 (function(){
   "use strict";
-  var APPS = [
-    { href:"apps/alphabet-pop.html", ico:"🔤", name:"Alphabet Pop", desc:"Letters and their sounds, A to Z.", c:0 },
-    { href:"apps/sound-match.html",  ico:"👂", name:"Sound Match",  desc:"Hear a sound — find the letter.", c:4 },
-    { href:"apps/sight-words.html",  ico:"👀", name:"Sight Words",  desc:"The everyday words to know by heart.", c:1 },
-    { href:"apps/sound-it-out.html", ico:"🪄", name:"Sound It Out", desc:"Blend the sounds to read a word.", c:3 },
-    { href:"apps/word-families.html",ico:"👨‍👩‍👧", name:"Word Families", desc:"cat, hat, bat — swap the first sound.", c:5 },
-    { href:"apps/counting-pop.html", ico:"🔢", name:"Counting Pop", desc:"Count along from 1 to 20.", c:6 }
+  var CATEGORIES = [
+    { title:"Letters & Sounds", icon:"🔤", items:[
+      { href:"apps/alphabet-pop.html", ico:"🔤", name:"Alphabet Pop", desc:"Letters and their sounds, A to Z.", c:0 },
+      { href:"apps/sound-match.html",  ico:"👂", name:"Sound Match",  desc:"Hear a sound — find the letter.", c:4 },
+      { href:"apps/first-sounds.html", ico:"🔉", name:"First Sounds", desc:"What sound does a word start with?", c:1 },
+      { href:"apps/letter-trace.html", ico:"✍️", name:"Letter Trace", desc:"Trace each letter with your finger.", c:6 }
+    ]},
+    { title:"Blending & Word Building", icon:"🧩", items:[
+      { href:"apps/sound-it-out.html", ico:"🪄", name:"Sound It Out", desc:"Blend the sounds to read a word.", c:3 },
+      { href:"apps/word-families.html",ico:"👨‍👩‍👧", name:"Word Families", desc:"cat, hat, bat — swap the first sound.", c:5 },
+      { href:"apps/rhyme-time.html",   ico:"🎵", name:"Rhyme Time",   desc:"Find the word that rhymes.", c:7 },
+      { href:"apps/magic-e.html",      ico:"✨", name:"Magic e",      desc:"Silent e makes the vowel say its name.", c:8 },
+      { href:"apps/spell-it.html",     ico:"🔡", name:"Spell It",     desc:"Build the word you hear.", c:2 }
+    ]},
+    { title:"Phonics Patterns", icon:"🔠", items:[
+      { href:"apps/digraphs.html",    ico:"🔠", name:"Digraphs",     desc:"Two letters, one sound: sh, ch, th.", c:0 },
+      { href:"apps/blends.html",      ico:"🪢", name:"Blends",       desc:"Two sounds together: bl, st, tr.", c:3 },
+      { href:"apps/vowel-teams.html", ico:"🅰️", name:"Vowel Teams",  desc:"Two vowels, one sound: ai, ee, oa.", c:5 }
+    ]},
+    { title:"Reading", icon:"📖", items:[
+      { href:"apps/sight-words.html",  ico:"👀", name:"Sight Words",  desc:"The everyday words to know by heart.", c:1 },
+      { href:"apps/sentence-pop.html", ico:"📝", name:"Sentence Pop", desc:"Read a sentence, word by word.", c:6 },
+      { href:"apps/story-pop.html",    ico:"📖", name:"Story Pop",    desc:"Read a little story, then answer.", c:9 },
+      { href:"apps/speed-words.html",  ico:"⚡", name:"Speed Words",  desc:"How many words in 60 seconds?", c:4 },
+      { href:"apps/phonics-check.html",ico:"✅", name:"Phonics Check",desc:"Sound out real and silly words.", c:7 }
+    ]},
+    { title:"Numbers", icon:"🔢", items:[
+      { href:"apps/counting-pop.html", ico:"🔢", name:"Counting Pop", desc:"Count along from 1 to 20.", c:6 },
+      { href:"apps/quick-count.html",  ico:"👁️", name:"Quick Count",  desc:"How many did you see?", c:4 },
+      { href:"apps/make-ten.html",     ico:"🔟", name:"Make Ten",     desc:"Find the number that makes ten.", c:3 },
+      { href:"apps/add-take.html",     ico:"➕", name:"Add & Take",   desc:"Add and subtract with pictures.", c:0 },
+      { href:"apps/skip-count.html",   ico:"🦘", name:"Skip Count",   desc:"Count by 2s, 5s and 10s.", c:8 },
+      { href:"apps/shapes.html",       ico:"🔺", name:"Shape Pop",    desc:"Find circles, squares and stars.", c:5 }
+    ]}
   ];
-  var grid = Pop.$("grid");
-  APPS.forEach(function(a){
-    var col = Pop.color(a.c);
-    var t = Pop.el("a", { "class":"tile", href:a.href });
-    t.style.setProperty("--c", col[0]);
-    t.style.setProperty("--c-dark", col[1]);
-    t.innerHTML =
-      '<span class="ico">'+a.ico+'</span>' +
-      '<span class="name">'+a.name+'</span>' +
-      '<span class="desc">'+a.desc+'</span>' +
-      '<span class="go">Play →</span>';
-    grid.appendChild(t);
+
+  var main = Pop.$("main");
+  CATEGORIES.forEach(function(cat){
+    var h = Pop.el("h2", { "class":"cat", html:'<span>'+cat.icon+'</span>'+cat.title });
+    main.appendChild(h);
+    var grid = Pop.el("div", { "class":"grid" });
+    cat.items.forEach(function(a){
+      var col = Pop.color(a.c);
+      var t = Pop.el("a", { "class":"tile", href:a.href });
+      t.style.setProperty("--c", col[0]);
+      t.style.setProperty("--c-dark", col[1]);
+      t.innerHTML =
+        '<span class="ico">'+a.ico+'</span>' +
+        '<span class="name">'+a.name+'</span>' +
+        '<span class="desc">'+a.desc+'</span>' +
+        '<span class="go">Play →</span>';
+      grid.appendChild(t);
+    });
+    main.appendChild(grid);
   });
 
   // Install-as-app support
@@ -111,7 +142,6 @@
   });
   window.addEventListener("appinstalled", function(){ installBtn.style.display = "none"; });
 
-  // iOS Safari has no install prompt — show the manual hint instead
   var isIOS = /iP(hone|ad|od)/.test(navigator.platform) ||
     (navigator.userAgent.indexOf("Mac")>-1 && "ontouchend" in document);
   var standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;

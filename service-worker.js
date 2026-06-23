@@ -2,22 +2,41 @@
    Precaches the whole suite so it runs offline once installed. */
 "use strict";
 
-var VERSION = "pop-v3";
+var VERSION = "pop-v4";
 var CACHE = "pop-cache-" + VERSION;
 
 // All paths are relative to this script (the repo root).
 var PRECACHE = [
   "./",
   "index.html",
+  "parent.html",
   "manifest.webmanifest",
   "shared/pop.css",
   "shared/pop.js",
+  "shared/data.js",
   "apps/alphabet-pop.html",
   "apps/sound-match.html",
-  "apps/sight-words.html",
+  "apps/first-sounds.html",
+  "apps/letter-trace.html",
   "apps/sound-it-out.html",
   "apps/word-families.html",
+  "apps/rhyme-time.html",
+  "apps/magic-e.html",
+  "apps/spell-it.html",
+  "apps/digraphs.html",
+  "apps/blends.html",
+  "apps/vowel-teams.html",
+  "apps/sight-words.html",
+  "apps/sentence-pop.html",
+  "apps/story-pop.html",
+  "apps/speed-words.html",
+  "apps/phonics-check.html",
   "apps/counting-pop.html",
+  "apps/quick-count.html",
+  "apps/make-ten.html",
+  "apps/add-take.html",
+  "apps/skip-count.html",
+  "apps/shapes.html",
   "icons/icon-192.png",
   "icons/icon-512.png",
   "icons/icon-180.png",

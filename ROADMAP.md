@@ -8,79 +8,69 @@ evidence-based **systematic synthetic phonics** (the "science of reading").
 once. Each game stays one-tap-simple. Keep it free, offline, no accounts, no
 ads. Don't let new features compete with the actual reading.
 
-Current focus: **she is still securing letter–sounds and finding blending
-hard.** So the near-term work reinforces letters/sounds and *active recall*,
-not new phonics patterns yet.
-
 ---
 
 ## ✅ Shipped
 
+**Letters & sounds**
 - **Alphabet Pop** — letters A–Z, their sounds, a word + picture each.
-- **Sound Match** — *hear a sound → find the letter* (active recall; the
-  retrieval counterpart to Alphabet Pop). Picture clue + spoken sound, 3/4/6
-  choices, case toggle, score.
-- **Sight Words** — high-frequency "Magic Words" in sets, with sentences.
-- **Sound It Out** — tap each letter for its sound, then blend (c‑a‑t → cat).
-- **Word Families** — same rime, swap the onset (cat/hat/bat/rat).
-- **Counting Pop** — count objects 1–20 aloud.
+- **Sound Match** — hear a sound → find the letter (active recall).
+- **First Sounds** — what sound does a word start with? (phonemic awareness)
+- **Letter Trace** — finger-tracing for letter formation.
+
+**Blending & word building**
+- **Sound It Out** — tap each letter's sound, then blend. Now with a **🐢 Slow**
+  guided "successive blending" mode (c … ca … cat) for when blending is hard.
+- **Word Families** — same rime, swap the onset (cat/hat/bat).
+- **Rhyme Time** — find the word that rhymes (phonemic awareness).
+- **Magic e** — silent e makes the vowel say its name (cap → cape).
+- **Spell It** — build the word you hear from letter tiles (encoding).
+
+**Phonics patterns**
+- **Digraphs** — sh, ch, th, wh, ck, ng, qu.
+- **Blends** — bl, cl, st, tr, fr… (consonant blends).
+- **Vowel Teams** — ai, ee, ea, oa, oo, igh…
+
+**Reading**
+- **Sight Words** — high-frequency "Magic Words" with sentences.
+- **Sentence Pop** — read a decodable sentence, word by word.
+- **Story Pop** — read a mini-story, then answer a comprehension question.
+- **Speed Words** — 60-second fluency sprint.
+- **Phonics Check** — read real + made-up words (Year 1 Phonics Screening style).
+
+**Numbers**
+- **Counting Pop** — count objects 1–20.
+- **Quick Count** — subitising (how many did you see?).
+- **Make Ten** — number bonds to 10 on a ten-frame.
+- **Add & Take** — add/subtract within 10 or 20, with picture support.
+- **Skip Count** — count by 2s, 5s, 10s.
+- **Shape Pop** — recognise circle/square/triangle/rectangle/star/heart.
+
+**Across the whole suite**
 - **Voice picker** — choose the best device voice; saved across all games.
-- **Progress store** — lightweight per-item mastery recording in `localStorage`
-  (`Pop.progress`). Sound Match already feeds it; ready for a parent view.
+- **Progress store** — per-item mastery in `localStorage` (`Pop.progress`).
+- **Sticker rewards** — a sticker every few correct answers (`Pop.stickers`).
+- **Grown-up Corner** (`parent.html`) — summary, sticker shelf, an A–Z
+  letter-sounds heat grid, and a per-game table so you can see what's sticking.
+- **Shared content module** (`shared/data.js`) — all word/phonics lists in one
+  place; the duplicated letter list is now shared.
 
 ---
 
-## 🎯 Now — Foundation / struggling reader (reinforce + recall)
+## 🔭 Next / nice-to-have
 
-The single biggest mode shift is **active recall** over passive "tap to hear".
+The roadmap's core is built. Future depth, roughly in priority order:
 
-- [ ] **Phonemic awareness game** — rhyme match, "what's the *first* sound?",
-      I-spy. This is *pre-print* ear training and the strongest lever for a
-      child who finds letters/sounds hard. No reading required.
-- [ ] **Guided blending help in Sound It Out** — slower, optional 2-step
-      blending (c‑a → ca → cat) and a "your turn" prompt.
-- [ ] **Letter formation / tracing** — trace the letter while hearing its
-      sound (writing reinforces reading; core Foundation handwriting).
-- [ ] **Parent view** — a simple "what she knows" screen reading `Pop.progress`
-      (which letters/sounds are sticking, which to revisit).
-
-## 🌱 Late Foundation → Year 1 (extend phonics — the decoding expansion)
-
-- [ ] **Digraphs** — sh, ch, th, ck, ng, qu (two letters, one sound).
-- [ ] **Consonant blends** — bl, st, tr, sp… (stop, frog, hand).
-- [ ] **Magic-e / split digraphs** — a_e, i_e, o_e (cap → cape).
-- [ ] **Decodable sentences** — "the big dog ran"; the real bridge from
-      word-calling to *reading*. Tap-to-hear each word, then the whole line.
-- [ ] **Year 1 Phonics Check practice** — Australia's Year 1 Phonics Screening
-      Check mixes real **and pseudo-words** (e.g. "vit", "splosh") to test pure
-      decoding. A focused practice mode is a concrete milestone to prep for.
-
-## 🌳 Year 1 → Year 2 (fluency, comprehension, spelling)
-
-- [ ] **Vowel teams** — ai, ee, oa, igh, oo, ar, or.
-- [ ] **Decodable mini-stories** — 2–4 sentences + one comprehension question.
-- [ ] **Spelling / encoding** — hear a word → build it from letter tiles
-      (the reverse of decoding; starts writing).
-- [ ] **Fluency** — timed/repeated sight-word & sentence flash for automaticity.
-
-## 🔢 Numeracy track (parallel)
-
-- [ ] **Subitising** — recognise small quantities without counting.
-- [ ] **Number bonds to 10** — making 10, part–part–whole.
-- [ ] **Add / subtract within 10, then 20.**
-- [ ] **Skip counting** — 2s, 5s, 10s.
-- [ ] **Shapes & patterns**, then later **money & time**.
-
----
-
-## 🧩 Cross-cutting (punch above their weight)
-
-- [ ] **Parent settings** — choose active sets/levels, lock difficulty.
-- [ ] **Gentle motivation** — sticker/reward shelf or soft streaks. Keep it
-      *non-manipulative*: no pressure timers, no ad-style loops.
-- [ ] **Data-driven content** — move phonics/word lists into shared data files
-      so new sets are drop-in (removes the duplicated letter list across
-      Alphabet Pop & Sound Match).
+- [ ] **More content per game** — deeper digraph/blend/vowel-team word banks,
+      more decodable sentences and stories, more sight-word sets.
+- [ ] **Decodable reader library** — short multi-page stories that only use
+      phonics taught so far, with tap-to-hear words.
+- [ ] **Parent settings** — choose which sets/levels are active per child, and
+      multiple child profiles. (Reset progress already lives in Grown-up Corner.)
+- [ ] **Handwriting accuracy** — optional stroke-order guidance and gentle
+      "stay on the line" feedback in Letter Trace.
+- [ ] **Numeracy depth** — teen-number place value, doubles, simple money/time.
+- [ ] **Daily streak / "play 3 games" goal** — gentle, non-pressury.
 
 ## 🚫 Deliberately avoiding
 
@@ -90,7 +80,7 @@ The single biggest mode shift is **active recall** over passive "tap to hear".
 
 ---
 
-*Pedagogy note: the sequence above follows structured-literacy ordering
-(phonemic awareness → letter-sounds → blending CVC → digraphs/blends →
-long vowels → connected text → fluency/comprehension). Many "sight words" are
-partly decodable — teach the tricky part explicitly rather than pure rote.*
+*Pedagogy note: the games follow structured-literacy ordering (phonemic
+awareness → letter-sounds → blending CVC → digraphs/blends → long vowels →
+connected text → fluency/comprehension). Many "sight words" are partly
+decodable — teach the tricky part explicitly rather than pure rote.*
