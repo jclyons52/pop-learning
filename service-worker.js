@@ -3,7 +3,11 @@
 "use strict";
 
 var VERSION = "pop-v5";
-var CACHE = "pop-cache-" + VERSION;
+// ASSETS_HASH is a digest of every precached file, written by `npm run stamp`.
+// Because the cache name includes it, the cache busts automatically whenever
+// any asset changes — CI fails if this is stale (see tests/validate.js).
+var ASSETS_HASH = "30855aa346";
+var CACHE = "pop-cache-" + VERSION + "-" + ASSETS_HASH;
 
 // All paths are relative to this script (the repo root).
 var PRECACHE = [
@@ -14,6 +18,7 @@ var PRECACHE = [
   "shared/pop.css",
   "shared/pop.js",
   "shared/data.js",
+  "shared/plan-core.js",
   "shared/plan.js",
   "apps/alphabet-pop.html",
   "apps/sound-match.html",
