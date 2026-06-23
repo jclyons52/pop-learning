@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dev tools (TypeScript)
+        run: npm install --no-audit --no-fund
+      - name: Syntax check (all inline + shared scripts parse)
+        run: npm run syntax
+      - name: Validate content, contract & offline cache
+        run: npm run validate
+      - name: Unit tests (plan logic)
+        run: npm test
+      - name: Type-check (JSDoc + tsc --noEmit)
+        run: npm run typecheck
