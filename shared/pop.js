@@ -48,6 +48,24 @@
   }
   function getSound() { return soundOn; }
 
+  /* ---------- progress store (per-game, per-item mastery) ----------
+     Lightweight localStorage record so a future parent view can show
+     exactly which letters/words/sounds are sticking. Best-effort. */
+  function loadProgress() {
+    try { return JSON.parse(localStorage.getItem("pop-progress") || "{}"); }
+    catch (e) { return {}; }
+  }
+  function recordProgress(game, key, correct) {
+    try {
+      var p = loadProgress();
+      p[game] = p[game] || {};
+      var e = p[game][key] || { seen: 0, right: 0 };
+      e.seen++; if (correct) e.right++;
+      p[game][key] = e;
+      localStorage.setItem("pop-progress", JSON.stringify(p));
+    } catch (e) {}
+  }
+
   /* ---------- speech & voice selection ---------- */
   var voice = null;
   var savedVoiceName = null;
@@ -277,6 +295,7 @@
     sampleVoice: sampleVoice, englishVoices: englishVoices,
     setVoiceName: setVoiceName, currentVoiceName: currentVoiceName, openVoiceModal: openVoiceModal,
     setSound: setSound, getSound: getSound,
+    progress: { all: loadProgress, record: recordProgress },
     sparkle: sparkle, onArrows: onArrows
   };
 })(window);

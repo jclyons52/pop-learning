@@ -2,7 +2,7 @@
    Precaches the whole suite so it runs offline once installed. */
 "use strict";
 
-var VERSION = "pop-v2";
+var VERSION = "pop-v3";
 var CACHE = "pop-cache-" + VERSION;
 
 // All paths are relative to this script (the repo root).
@@ -13,6 +13,7 @@ var PRECACHE = [
   "shared/pop.css",
   "shared/pop.js",
   "apps/alphabet-pop.html",
+  "apps/sound-match.html",
   "apps/sight-words.html",
   "apps/sound-it-out.html",
   "apps/word-families.html",
