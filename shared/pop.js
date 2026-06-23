@@ -65,6 +65,21 @@
       localStorage.setItem("pop-progress", JSON.stringify(p));
     } catch (e) {}
   }
+  function totalCorrect() {
+    var p = loadProgress(), n = 0;
+    for (var g in p) for (var k in p[g]) n += (p[g][k].right || 0);
+    return n;
+  }
+  function resetProgress() { try { localStorage.removeItem("pop-progress"); } catch (e) {} }
+
+  /* ---------- rewards: a sticker for every few correct answers ---------- */
+  var STICKERS = ["🌟","🦄","🐶","🍦","🚀","🌈","🦖","⚽","🦋","🍩",
+    "🐳","🎈","🏆","🐥","🌻","🦊","🍓","🎸","🐢","👑","🍉","🐬","🌼","🚂"];
+  var PER_STICKER = 5;
+  function stickersEarned() {
+    var n = Math.floor(totalCorrect() / PER_STICKER);
+    return STICKERS.slice(0, Math.min(n, STICKERS.length));
+  }
 
   /* ---------- speech & voice selection ---------- */
   var voice = null;
@@ -295,7 +310,8 @@
     sampleVoice: sampleVoice, englishVoices: englishVoices,
     setVoiceName: setVoiceName, currentVoiceName: currentVoiceName, openVoiceModal: openVoiceModal,
     setSound: setSound, getSound: getSound,
-    progress: { all: loadProgress, record: recordProgress },
+    progress: { all: loadProgress, record: recordProgress, totalCorrect: totalCorrect, reset: resetProgress },
+    stickers: { earned: stickersEarned, all: function () { return STICKERS.slice(); }, per: PER_STICKER },
     sparkle: sparkle, onArrows: onArrows
   };
 })(window);
