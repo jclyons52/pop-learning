@@ -144,7 +144,7 @@
     Pop.speak(w[1]);
     reveal.classList.add("show");
   }
-  function go(dir){ var n = family().words.length; pos = (pos + dir + n) % n; render(true); say(); }
+  function go(dir){ var n = family().words.length; pos = (pos + dir + n) % n; render(true); }
 
   card.addEventListener("click", function(){
     card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");

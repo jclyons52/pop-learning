@@ -93,7 +93,7 @@
   }
 
   function sayCurrent(){ var T = current(); Pop.speak(T[0] + ", as in " + T[1] + "."); }
-  function go(dir){ pos = (pos + dir + ITEMS.length) % ITEMS.length; render(true); sayCurrent(); }
+  function go(dir){ pos = (pos + dir + ITEMS.length) % ITEMS.length; render(true); }
 
   card.addEventListener("click", function(){
     card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");

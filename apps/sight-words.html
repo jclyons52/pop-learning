@@ -126,7 +126,7 @@
 
   function sayWord(){ Pop.speak(current()[0]); }
   function saySentence(){ Pop.speak(current()[1]); }
-  function go(dir){ pos = (pos + dir + words().length) % words().length; render(true); sayWord(); }
+  function go(dir){ pos = (pos + dir + words().length) % words().length; render(true); }
 
   function loadSet(animate){
     order = shuffled ? Pop.shuffle(baseOrder()) : baseOrder();

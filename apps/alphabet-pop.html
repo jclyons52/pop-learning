@@ -104,7 +104,7 @@
   }
 
   function sayCurrent(){ var L = current(); Pop.speak(L[0] + " for " + L[1] + "."); }
-  function go(dir){ pos = (pos + dir + LETTERS.length) % LETTERS.length; render(true); sayCurrent(); }
+  function go(dir){ pos = (pos + dir + LETTERS.length) % LETTERS.length; render(true); }
 
   card.addEventListener("click", function(){
     card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
