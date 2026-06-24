@@ -8,6 +8,7 @@
     "syntax": "deno run --allow-read tests/syntax-check.js",
     "validate": "deno run --allow-read tests/validate.js",
     "stamp": "deno run --allow-read --allow-write tests/stamp-sw.js",
+    "split": "deno run --allow-read --allow-write tests/split-audio.js",
     "all": "deno task fmt:check && deno task syntax && deno task validate && deno task test && deno task check"
   },
   "fmt": {

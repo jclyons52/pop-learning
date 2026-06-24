@@ -216,42 +216,40 @@
   }
   /* ---------- phoneme audio: recorded clip if available, else TTS ---------- */
   // Clean phonics needs recorded clips (device TTS can't make pure phonemes).
-  // A clip plays when sounds/<key>.mp3 is listed in sounds/manifest.json;
-  // otherwise we fall back to the device voice at a lower, slower pitch.
+  // sounds/manifest.json maps a respelling key -> clip filename; when a key is
+  // present we play the clip, otherwise we fall back to the device voice.
   var soundClips = {};
   var clipAudio = null;
   (function loadClipManifest() {
     try {
       fetch(new URL("sounds/manifest.json", ROOT).href)
         .then(function (r) {
-          return r.ok ? r.json() : [];
+          return r.ok ? r.json() : {};
         })
-        .then(function (list) {
-          (list || []).forEach(function (k) {
-            soundClips[k] = 1;
-          });
+        .then(function (map) {
+          if (map && typeof map === "object") soundClips = map;
         })
         .catch(function () {});
     } catch (e) {}
   })();
-  function playClip(key) {
-    cancel();
-    if (!clipAudio) clipAudio = new Audio();
-    clipAudio.src = new URL("sounds/" + key + ".mp3", ROOT).href;
-    var p = clipAudio.play();
-    if (p && p.catch) {
-      p.catch(function () {
-        speak(key, { rate: 0.72, pitch: 1.0 });
-      });
-    }
-  }
   /* Speak a phoneme/letter-sound: a recorded clip when one exists, else the
      device voice reading the respelling ("buh"/"shh") lower and slower. */
   function sound(text) {
     if (!soundOn) return;
-    var key = String(text);
-    if (soundClips[key]) playClip(key);
-    else speak(text, { rate: 0.72, pitch: 1.0 });
+    var key = String(text), file = soundClips[key];
+    if (file) {
+      cancel();
+      if (!clipAudio) clipAudio = new Audio();
+      clipAudio.src = new URL("sounds/" + file, ROOT).href;
+      var p = clipAudio.play();
+      if (p && p.catch) {
+        p.catch(function () {
+          speak(text, { rate: 0.72, pitch: 1.0 });
+        });
+      }
+    } else {
+      speak(text, { rate: 0.72, pitch: 1.0 });
+    }
   }
   /* Play a sample of the current voice — bypasses the mute toggle so it
      can always be previewed from the voice picker. */
