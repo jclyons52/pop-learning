@@ -6,7 +6,7 @@
    =========================================================== */
 (function (global) {
   "use strict";
-  var Pop = global.Pop || (global.Pop = {});
+  var Pop = /** @type {any} */ (global.Pop || (global.Pop = {}));
   var Core = global.PopPlanCore;
   if (!Core) return; // plan-core.js must load first
 
@@ -19,7 +19,7 @@
   }
   function load(key, def) {
     try {
-      return JSON.parse(localStorage.getItem(key)) || def;
+      return JSON.parse(localStorage.getItem(key) || "null") || def;
     } catch (e) {
       return def;
     }

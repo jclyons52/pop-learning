@@ -2,9 +2,9 @@
 // syntax error can never reach the browser. Run: deno run --allow-read tests/syntax-check.js
 import fs from "node:fs";
 import path from "node:path";
-import { ROOT } from "./lib.js";
+import { ROOT } from "./lib.ts";
 
-const htmlFiles = [];
+const htmlFiles: string[] = [];
 for (const dir of ["apps", "."]) {
   for (const f of fs.readdirSync(path.join(ROOT, dir))) {
     if (f.endsWith(".html")) htmlFiles.push(path.join(dir, f));
@@ -17,7 +17,7 @@ const compile = (code, where) => {
   try {
     new Function(code); // compiles the body; throws on a syntax error
   } catch (e) {
-    console.error(`✗ ${where}: ${e.message}`);
+    console.error(`✗ ${where}: ${(e as Error).message}`);
     bad++;
   }
 };

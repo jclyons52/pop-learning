@@ -3,10 +3,10 @@
 // stale service-worker hash (the stale-cache bug). Exits non-zero on failure.
 // Run: deno run --allow-read tests/validate.js
 import "../shared/plan-core.js"; // sets globalThis.PopPlanCore
-import { appSlugs, computeAssetsHash, loadData, parsePrecache, readAssetsHash } from "./lib.js";
+import { appSlugs, computeAssetsHash, loadData, parsePrecache, readAssetsHash } from "./lib.ts";
 
 const C = globalThis.PopPlanCore;
-const errors = [];
+const errors: string[] = [];
 const ok = (cond, msg) => {
   if (!cond) errors.push(msg);
 };

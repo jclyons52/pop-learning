@@ -38,7 +38,7 @@ export function computeAssetsHash() {
     IIFE invoked with `window`, so we run it as a function body with a fake one. */
 export function loadData() {
   const src = fs.readFileSync(path.join(ROOT, "shared/data.js"), "utf8");
-  const win = {};
+  const win: any = {};
   new Function("window", src)(win);
   return win.Pop.data;
 }

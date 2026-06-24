@@ -4,7 +4,7 @@
 //   deno task stamp     (then bump VERSION if it's a meaningful release)
 import fs from "node:fs";
 import path from "node:path";
-import { computeAssetsHash, readAssetsHash, ROOT } from "./lib.js";
+import { computeAssetsHash, readAssetsHash, ROOT } from "./lib.ts";
 
 const hash = computeAssetsHash();
 const before = readAssetsHash();

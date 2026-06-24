@@ -6,7 +6,8 @@
   "use strict";
 
   // Resolve the repo root from this script's own URL (shared/ is one level down).
-  var scriptURL = (document.currentScript && document.currentScript.src) || "";
+  var scriptURL = (document.currentScript && /** @type {HTMLScriptElement} */ (document.currentScript).src) ||
+    "";
   var ROOT = scriptURL ? new URL("../", scriptURL) : new URL("./", location.href);
 
   /* ---------- tiny helpers ---------- */
@@ -480,7 +481,10 @@
         if ((a[t][slug] || 0) >= 12) return; // enough for today; stop writing
         a[t][slug] = (a[t][slug] || 0) + 1;
         var keys = Object.keys(a).sort();
-        while (keys.length > 14) delete a[keys.shift()]; // keep ~2 weeks
+        while (keys.length > 14) { // keep ~2 weeks
+          var oldest = keys.shift();
+          if (oldest) delete a[oldest];
+        }
         localStorage.setItem("pop-activity", JSON.stringify(a));
       } catch (e) {}
     }

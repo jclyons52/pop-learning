@@ -92,7 +92,7 @@ function parseWav(bytes) {
   if (ascii(bytes, 0, 4) !== "RIFF" || ascii(bytes, 8, 4) !== "WAVE") {
     throw new Error("Not a WAV file (expected RIFF/WAVE). Export as 16-bit PCM WAV.");
   }
-  let off = 12, fmt = null, dataOff = -1, dataLen = 0;
+  let off = 12, fmt: any = null, dataOff = -1, dataLen = 0;
   while (off + 8 <= bytes.length) {
     const id = ascii(bytes, off, 4);
     const size = dv.getUint32(off + 4, true);
@@ -153,7 +153,7 @@ function findSegments(samples, sampleRate) {
     }
     loud[w] = Math.sqrt(s / win) > thresh;
   }
-  const segs = [];
+  const segs: number[][] = [];
   let w = 0;
   while (w < nWins) {
     if (!loud[w]) {
@@ -175,7 +175,7 @@ function findSegments(samples, sampleRate) {
   return segs;
 }
 
-function clip(samples, [s, e], sampleRate) {
+function clip(samples, [s, e]: number[], sampleRate) {
   let peak = 0;
   for (let i = s; i < e; i++) {
     const a = Math.abs(samples[i]);
