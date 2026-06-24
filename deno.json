@@ -1,14 +1,14 @@
 {
-  "//": "Deno-only toolchain: format, type-check and test with Deno's own bundled TypeScript. No npm, no registry installs. Browser code stays .js+JSDoc (no build step); dev tooling is .ts. `deno check` type-checks the whole shared core + tooling.",
+  "//": "Deno-only toolchain: format, type-check and test with Deno's own bundled TypeScript. No npm, no registry installs. Browser code stays .js+JSDoc (no build step); dev tooling is .ts. tests/ holds real tests; scripts/ holds the CLI tools.",
   "tasks": {
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
-    "check": "deno check shared/globals.d.ts shared/plan-core.js shared/plan.js shared/data.js shared/pop.js tests/lib.ts tests/validate.ts tests/stamp-sw.ts tests/syntax-check.ts tests/split-audio.ts tests/plan-core.test.ts",
+    "check": "deno check shared/globals.d.ts shared/plan-core.js shared/plan.js shared/data.js shared/pop.js scripts/lib.ts scripts/validate.ts scripts/stamp-sw.ts scripts/syntax-check.ts scripts/split-audio.ts tests/plan-core.test.ts",
     "test": "deno test --no-check tests/plan-core.test.ts",
-    "syntax": "deno run --allow-read tests/syntax-check.ts",
-    "validate": "deno run --allow-read tests/validate.ts",
-    "stamp": "deno run --allow-read --allow-write tests/stamp-sw.ts",
-    "split": "deno run --allow-read --allow-write tests/split-audio.ts",
+    "syntax": "deno run --allow-read scripts/syntax-check.ts",
+    "validate": "deno run --allow-read scripts/validate.ts",
+    "stamp": "deno run --allow-read --allow-write scripts/stamp-sw.ts",
+    "split": "deno run --allow-read --allow-write scripts/split-audio.ts",
     "all": "deno task fmt:check && deno task syntax && deno task validate && deno task test && deno task check"
   },
   "fmt": {

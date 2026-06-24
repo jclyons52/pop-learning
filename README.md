@@ -53,9 +53,12 @@ shared/pop.css          shared design system (the "crayon box" look)
 shared/pop.js           speech, sparkle, PWA wiring, progress + activity tracking
 shared/data.js          all word / phonics / number content (Pop.data)
 shared/plan.js          the daily-plan engine (curriculum, mastery, streak)
+sounds/                 recorded phoneme clips + manifest (RECORDING.md)
 manifest.webmanifest    install metadata
 service-worker.js       offline caching (bump VERSION when files change)
 icons/                  app icons (+ make_icons.py that generates them)
+tests/                  unit tests (deno test)
+scripts/                dev CLI tools (validate, stamp, syntax, split-audio)
 ```
 
 To run locally you just need a static file server (a service worker won't register from `file://`):
