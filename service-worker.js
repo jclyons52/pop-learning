@@ -6,7 +6,7 @@ var VERSION = "pop-v5";
 // ASSETS_HASH is a digest of every precached file, written by `npm run stamp`.
 // Because the cache name includes it, the cache busts automatically whenever
 // any asset changes — CI fails if this is stale (see tests/validate.js).
-var ASSETS_HASH = "def31a76bb";
+var ASSETS_HASH = "a5329e0722";
 var CACHE = "pop-cache-" + VERSION + "-" + ASSETS_HASH;
 
 // All paths are relative to this script (the repo root).
@@ -46,7 +46,7 @@ var PRECACHE = [
   "icons/icon-192.png",
   "icons/icon-512.png",
   "icons/icon-180.png",
-  "icons/icon-maskable-512.png"
+  "icons/icon-maskable-512.png",
 ];
 
 self.addEventListener("install", function (e) {
@@ -56,7 +56,9 @@ self.addEventListener("install", function (e) {
       return Promise.all(PRECACHE.map(function (url) {
         return cache.add(new Request(url, { cache: "reload" })).catch(function () {});
       }));
-    }).then(function () { return self.skipWaiting(); })
+    }).then(function () {
+      return self.skipWaiting();
+    }),
   );
 });
 
@@ -66,7 +68,9 @@ self.addEventListener("activate", function (e) {
       return Promise.all(keys.map(function (k) {
         if (k !== CACHE) return caches.delete(k);
       }));
-    }).then(function () { return self.clients.claim(); })
+    }).then(function () {
+      return self.clients.claim();
+    }),
   );
 });
 
@@ -85,14 +89,16 @@ self.addEventListener("fetch", function (e) {
         return fetch(req).then(function (res) {
           if (res && res.ok) {
             var copy = res.clone();
-            caches.open(CACHE).then(function (c) { c.put(req, copy); });
+            caches.open(CACHE).then(function (c) {
+              c.put(req, copy);
+            });
           }
           return res;
         }).catch(function () {
           // offline navigation fallback -> the hub
           if (req.mode === "navigate") return caches.match("index.html");
         });
-      })
+      }),
     );
     return;
   }
@@ -103,11 +109,15 @@ self.addEventListener("fetch", function (e) {
       var net = fetch(req).then(function (res) {
         if (res && (res.ok || res.type === "opaque")) {
           var copy = res.clone();
-          caches.open(CACHE).then(function (c) { c.put(req, copy); });
+          caches.open(CACHE).then(function (c) {
+            c.put(req, copy);
+          });
         }
         return res;
-      }).catch(function () { return hit; });
+      }).catch(function () {
+        return hit;
+      });
       return hit || net;
-    })
+    }),
   );
 });

@@ -1,12 +1,19 @@
 {
-  "//": "Task runner + type-check config. No npm, no registry installs. Node runs the zero-dependency checks; Deno type-checks shared/plan-core.js with its own bundled TypeScript.",
+  "//": "Deno-only toolchain: format, type-check and test. No npm, no registry installs. Node built-ins come from Deno's own bundled compatibility layer.",
   "tasks": {
-    "syntax": "node tests/syntax-check.js",
-    "validate": "node tests/validate.js",
-    "test": "node --test tests/*.test.js",
-    "typecheck": "deno check shared/plan-core.js",
-    "stamp": "node tests/stamp-sw.js",
-    "check": "deno task syntax && deno task validate && deno task test && deno task typecheck"
+    "fmt": "deno fmt",
+    "fmt:check": "deno fmt --check",
+    "check": "deno check shared/plan-core.js",
+    "test": "deno test --no-check tests/plan-core.test.js",
+    "syntax": "deno run --allow-read tests/syntax-check.js",
+    "validate": "deno run --allow-read tests/validate.js",
+    "stamp": "deno run --allow-read --allow-write tests/stamp-sw.js",
+    "all": "deno task fmt:check && deno task syntax && deno task validate && deno task test && deno task check"
+  },
+  "fmt": {
+    "exclude": ["icons", "**/*.html"],
+    "lineWidth": 110,
+    "proseWrap": "preserve"
   },
   "compilerOptions": {
     "checkJs": true,

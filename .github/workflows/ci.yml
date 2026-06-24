@@ -4,30 +4,29 @@ on:
   push:
   pull_request:
 
-# No package installs: Node runs the zero-dependency checks, Deno type-checks
-# with its own bundled TypeScript. Nothing is pulled from the npm registry.
+# Deno-only: format, type-check and test with Deno's own bundled toolchain.
+# No npm, nothing pulled from the npm registry.
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Syntax check (all inline + shared scripts parse)
-        run: node tests/syntax-check.js
-
-      - name: Validate content, contract & offline cache
-        run: node tests/validate.js
-
-      - name: Unit tests (plan logic)
-        run: node --test tests/*.test.js
-
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
 
+      - name: Format check
+        run: deno task fmt:check
+
+      - name: Syntax check (all inline + shared scripts parse)
+        run: deno task syntax
+
+      - name: Validate content, contract & offline cache
+        run: deno task validate
+
+      - name: Unit tests (plan logic)
+        run: deno task test
+
       - name: Type-check (Deno, JSDoc + bundled TypeScript)
-        run: deno check shared/plan-core.js
+        run: deno task check

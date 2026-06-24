@@ -12,7 +12,7 @@ The home screen opens with **Today's Plan** — a short, adaptive ~10-minute
 session (a warm-up, two focus games, and a number game) chosen to match where
 your child is at. It uses **spaced review** and **mastery-gated stages**, so it
 quietly advances as they're ready, builds a gentle **streak**, and celebrates
-when the day's plan is done. *Little and often* is what makes reading stick.
+when the day's plan is done. _Little and often_ is what makes reading stick.
 
 Grown-ups can see how it's going — and nudge the level — in the
 **Grown-up Corner** (progress heat-grid, sticker shelf, per-game stats, and the
@@ -68,24 +68,24 @@ python3 -m http.server 8000
 ## Tests & checks
 
 The app ships with **no build step and no runtime dependencies**, and the dev
-checks install **nothing from any package registry** — Node runs the
-zero-dependency checks (built-in modules only) and [Deno](https://deno.com)
-type-checks with its own bundled TypeScript. No `npm install`.
+checks install **nothing from any package registry**. Everything runs through
+[Deno](https://deno.com) — its own bundled formatter, type-checker and test
+runner (the validators use `node:` built-ins, which Deno provides). No `npm`.
 
 ```bash
-node tests/syntax-check.js      # every inline + shared script parses
-node --test tests/*.test.js     # unit tests for the plan logic
-node tests/validate.js          # game-data integrity + plan/cache contract + SW-hash guard
-deno check shared/plan-core.js  # type-check the JSDoc-typed core (needs Deno)
+deno task fmt        # format (deno fmt);  fmt:check verifies in CI
+deno task syntax     # every inline + shared script parses
+deno task test       # unit tests for the plan logic (deno test)
+deno task validate   # game-data integrity + plan/cache contract + SW-hash guard
+deno task check      # type-check the JSDoc-typed core (deno check)
+deno task all        # all of the above (what CI runs)
 ```
-
-Or, with Deno installed, `deno task check` runs all four (see `deno.json`).
 
 `shared/plan-core.js` is **pure logic** (no DOM/storage) so it's unit-testable;
 `shared/plan.js` is the thin browser wrapper around it. After editing any
-precached file, run **`node tests/stamp-sw.js`** to refresh the service-worker
-asset hash (the offline cache name includes it, so caches bust automatically —
-and `validate` fails if you forget). CI runs everything on push
+precached file, run **`deno task stamp`** to refresh the service-worker asset
+hash (the offline cache name includes it, so caches bust automatically — and
+`validate` fails if you forget). CI runs everything on push
 (`.github/workflows/ci.yml`).
 
 ## Regenerating the icons
