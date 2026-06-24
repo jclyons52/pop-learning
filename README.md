@@ -98,4 +98,6 @@ python3 icons/make_icons.py
 
 ## Licence
 
-Free to use and adapt. Made with ❤️.
+Code is [MIT licensed](LICENSE) — free to use, adapt and share. Any recorded
+voice clips added under `sounds/` are the author's own and shared under the same
+terms unless noted otherwise. Made with ❤️.
