@@ -22,13 +22,17 @@ simply yours.
    deno task split daughter-sounds.wav
    ```
 
-   It writes `sounds/<key>.wav` for each, updates `manifest.json`, and prints the
-   lines to paste into `PRECACHE` in `service-worker.js`. Then
-   `deno task stamp && deno task validate`, and the games use your voice.
+   It prints a **per-segment report** (time · duration · which clip) so you can
+   check it lines up — seg 1 = `ah`, 2 = `buh`, … If the count is off it
+   **auto-tunes** to hit 51; if it still can't, it writes **nothing** and points
+   at the problem row (⚠ long = two sounds merged, ⚠ short = a stray blip), so a
+   missed sound can't silently shift all the labels. Then re-record that gap a
+   bit longer, or force the detection, e.g. `deno task split rec.wav --min-silence=160`.
 
-   If it reports the wrong number of segments, re-record with clearer gaps (or
-   nudge the `THRESHOLDS` in `tests/split-audio.js`). You can re-run it as often
-   as you like.
+   Once it reports 51 and writes, it clears any old clips and updates
+   `manifest.json`. Paste the printed lines into `PRECACHE` in
+   `service-worker.js`, run `deno task stamp && deno task validate`, and the
+   games use your voice. Re-run as often as you like.
 
 ## The 51 sounds, in order
 
