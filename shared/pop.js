@@ -214,11 +214,44 @@
     cancel();
     speechSynthesis.speak(utter(text, opts));
   }
-  /* Speak a phoneme/letter-sound. Lower pitch + slower than the word voice so
-     respellings like "buh"/"shh" read as cleanly as the built-in voice allows.
-     (Device TTS can't make truly pure phonemes — recorded clips would.) */
+  /* ---------- phoneme audio: recorded clip if available, else TTS ---------- */
+  // Clean phonics needs recorded clips (device TTS can't make pure phonemes).
+  // A clip plays when sounds/<key>.mp3 is listed in sounds/manifest.json;
+  // otherwise we fall back to the device voice at a lower, slower pitch.
+  var soundClips = {};
+  var clipAudio = null;
+  (function loadClipManifest() {
+    try {
+      fetch(new URL("sounds/manifest.json", ROOT).href)
+        .then(function (r) {
+          return r.ok ? r.json() : [];
+        })
+        .then(function (list) {
+          (list || []).forEach(function (k) {
+            soundClips[k] = 1;
+          });
+        })
+        .catch(function () {});
+    } catch (e) {}
+  })();
+  function playClip(key) {
+    cancel();
+    if (!clipAudio) clipAudio = new Audio();
+    clipAudio.src = new URL("sounds/" + key + ".mp3", ROOT).href;
+    var p = clipAudio.play();
+    if (p && p.catch) {
+      p.catch(function () {
+        speak(key, { rate: 0.72, pitch: 1.0 });
+      });
+    }
+  }
+  /* Speak a phoneme/letter-sound: a recorded clip when one exists, else the
+     device voice reading the respelling ("buh"/"shh") lower and slower. */
   function sound(text) {
-    speak(text, { rate: 0.72, pitch: 1.0 });
+    if (!soundOn) return;
+    var key = String(text);
+    if (soundClips[key]) playClip(key);
+    else speak(text, { rate: 0.72, pitch: 1.0 });
   }
   /* Play a sample of the current voice — bypasses the mute toggle so it
      can always be previewed from the voice picker. */

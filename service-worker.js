@@ -3,10 +3,10 @@
 "use strict";
 
 var VERSION = "pop-v5";
-// ASSETS_HASH is a digest of every precached file, written by `npm run stamp`.
+// ASSETS_HASH is a digest of every precached file, written by `deno task stamp`.
 // Because the cache name includes it, the cache busts automatically whenever
 // any asset changes — CI fails if this is stale (see tests/validate.js).
-var ASSETS_HASH = "a5329e0722";
+var ASSETS_HASH = "f323881a9f";
 var CACHE = "pop-cache-" + VERSION + "-" + ASSETS_HASH;
 
 // All paths are relative to this script (the repo root).
@@ -20,6 +20,7 @@ var PRECACHE = [
   "shared/data.js",
   "shared/plan-core.js",
   "shared/plan.js",
+  "sounds/manifest.json",
   "apps/alphabet-pop.html",
   "apps/sound-match.html",
   "apps/first-sounds.html",
