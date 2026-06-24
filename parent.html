@@ -241,6 +241,38 @@
       for you — they're a gentle guide, not a report card.
     </section>
 
+    <!-- report a bug -->
+    <style>
+      .report-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        font-family: var(--font);
+        font-weight: 700;
+        font-size: 1rem;
+        color: #fff;
+        background: var(--ink);
+        border-radius: 999px;
+        padding: 12px 20px;
+        box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+      }
+      .report-btn:active {
+        transform: translateY(4px);
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0.25);
+      }
+    </style>
+    <section class="panel">
+      <h2>🐞 Report a bug</h2>
+      <p class="sub">
+        Something not working? This opens a GitHub issue pre-filled with the details (you'll need a
+        free GitHub account). Nothing is sent automatically — you review it and hit submit.
+      </p>
+      <a class="report-btn" id="bugBtn" target="_blank" rel="noopener">🐞 Report a bug</a>
+    </section>
+
     <!-- 5) reset -->
     <div class="reset-row">
       <button class="reset" id="resetBtn">🧹 Reset all progress</button>
@@ -400,6 +432,35 @@
   $("nDown").addEventListener("click", function(){ nudge("numbers", -1); });
   $("autoBtn").addEventListener("click", function(){ Pop.plan.setStage("reading", null); Pop.plan.setStage("numbers", null); refresh(); });
   refresh();
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  var btn = document.getElementById("bugBtn");
+  if(!btn) return;
+  var REPO = "jclyons52/pop-learning";
+  var standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  var voice = (window.Pop && Pop.currentVoiceName && Pop.currentVoiceName()) || "default";
+  var soundOn = (window.Pop && Pop.getSound) ? Pop.getSound() : true;
+  var body = [
+    "**What went wrong?**", "", "(describe what happened)", "",
+    "**Which game?**", "", "(e.g. Sound It Out)", "",
+    "**What did you expect to happen?**", "", "",
+    "**Steps to reproduce**", "1. ", "2. ", "",
+    "---",
+    "_Auto-filled — please keep, it helps with debugging:_",
+    "- Browser: " + navigator.userAgent,
+    "- Screen: " + window.innerWidth + "×" + window.innerHeight + " @" + (window.devicePixelRatio || 1) + "x",
+    "- Installed app: " + (standalone ? "yes" : "no"),
+    "- Language: " + navigator.language,
+    "- Voice: " + voice + " · sound " + (soundOn ? "on" : "off"),
+    "- When: " + new Date().toISOString()
+  ].join("\n");
+  btn.href = "https://github.com/" + REPO + "/issues/new" +
+    "?labels=bug" +
+    "&title=" + encodeURIComponent("Bug: ") +
+    "&body=" + encodeURIComponent(body);
 })();
 </script>
 </body>
