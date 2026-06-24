@@ -119,7 +119,7 @@
       var t = Pop.el("button", { "class":"tile", text: ch, "aria-label": "Sound for " + ch });
       t.addEventListener("click", function(e){
         e.stopPropagation();
-        lit(t); Pop.speak(SOUNDS[ch] || ch);
+        lit(t); Pop.sound(SOUNDS[ch] || ch);
       });
       tilesEl.appendChild(t);
     });
@@ -149,12 +149,12 @@
     if(slowMode){
       // guided "successive" blending: each sound, then build it up (c, ca, cat)
       step = 560;
-      seq = letters.map(function(ch){ return { text: SOUNDS[ch] || ch, rate: 0.8, gap: 480 }; });
+      seq = letters.map(function(ch){ return { text: SOUNDS[ch] || ch, rate: 0.72, pitch: 1.0, gap: 480 }; });
       for(var i = 2; i <= letters.length; i++){ seq.push({ text: word.slice(0, i), rate: 0.78, gap: 320 }); }
       seq.push({ text: word, rate: 0.85 });
     } else {
       step = 360;
-      seq = letters.map(function(ch, i){ return { text: SOUNDS[ch] || ch, gap: i < letters.length-1 ? 260 : 420 }; });
+      seq = letters.map(function(ch, i){ return { text: SOUNDS[ch] || ch, rate: 0.72, pitch: 1.0, gap: i < letters.length-1 ? 260 : 420 }; });
       seq.push({ text: word, rate: 0.9 });
     }
     Pop.speakSeq(seq);

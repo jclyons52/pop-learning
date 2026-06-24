@@ -92,7 +92,10 @@
     if(animate){ card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop"); }
   }
 
-  function sayCurrent(){ var B = current(); Pop.speak(B[0] + ". " + B[1] + "."); }
+  function sayCurrent(){
+    var B = current();
+    Pop.speakSeq([{ text:B[3], rate:0.72, pitch:1.0, gap:260 }, { text:B[1], rate:0.9 }]);
+  }
   function go(dir){ pos = (pos + dir + ITEMS.length) % ITEMS.length; render(true); sayCurrent(); }
 
   card.addEventListener("click", function(){

@@ -175,7 +175,12 @@
 
   function go(dir){ pos = (pos + dir + WORDS.length) % WORDS.length; render(true); }
 
-  card.addEventListener("click", addE);
+  // tapping the word just reads the short word; the magic happens via the
+  // "Add magic e" button (or by tapping the silent-e tile)
+  card.addEventListener("click", function(){
+    card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
+    Pop.speak(current()[0]);
+  });
   $("addBtn").addEventListener("click", addE);
   $("prevBtn").addEventListener("click", function(){ go(-1); });
   $("nextBtn").addEventListener("click", function(){ go(1); });

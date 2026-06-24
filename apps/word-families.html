@@ -113,9 +113,9 @@
 
     tilesEl.innerHTML = "";
     var onset = Pop.el("button", { "class":"tile onset", text: w[0], "aria-label":"First sound" });
-    onset.addEventListener("click", function(e){ e.stopPropagation(); flash(onset); Pop.speak(soundFor(w[0])); });
+    onset.addEventListener("click", function(e){ e.stopPropagation(); flash(onset); Pop.sound(soundFor(w[0])); });
     var rime = Pop.el("button", { "class":"tile rime", text: fam.rime, "aria-label":"Word ending" });
-    rime.addEventListener("click", function(e){ e.stopPropagation(); flash(rime); Pop.speak(fam.rime); });
+    rime.addEventListener("click", function(e){ e.stopPropagation(); flash(rime); Pop.sound(fam.rime); });
     tilesEl.appendChild(onset); tilesEl.appendChild(rime);
 
     emoji.textContent = w[2];

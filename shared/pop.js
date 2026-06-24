@@ -10,13 +10,17 @@
   var ROOT = scriptURL ? new URL("../", scriptURL) : new URL("./", location.href);
 
   /* ---------- tiny helpers ---------- */
-  function $(id) { return document.getElementById(id); }
+  function $(id) {
+    return document.getElementById(id);
+  }
   function el(tag, attrs) {
     var n = document.createElement(tag);
-    if (attrs) for (var k in attrs) {
-      if (k === "text") n.textContent = attrs[k];
-      else if (k === "html") n.innerHTML = attrs[k];
-      else n.setAttribute(k, attrs[k]);
+    if (attrs) {
+      for (var k in attrs) {
+        if (k === "text") n.textContent = attrs[k];
+        else if (k === "html") n.innerHTML = attrs[k];
+        else n.setAttribute(k, attrs[k]);
+      }
     }
     return n;
   }
@@ -24,57 +28,105 @@
     var a = arr.slice();
     for (var i = a.length - 1; i > 0; i--) {
       var j = Math.floor(Math.random() * (i + 1));
-      var t = a[i]; a[i] = a[j]; a[j] = t;
+      var t = a[i];
+      a[i] = a[j];
+      a[j] = t;
     }
     return a;
   }
 
   /* crayon-box palette: [face, darker bottom edge] */
   var COLORS = [
-    ["#FA5252", "#D23B3B"], ["#FF922B", "#DC6B0E"], ["#F0A500", "#C98700"],
-    ["#37B24D", "#2B8A3E"], ["#12B886", "#0C8F6A"], ["#3B9DF0", "#1C7FD6"],
-    ["#845EF7", "#6741D9"], ["#F368B0", "#D14B92"], ["#20A4F3", "#1184CF"],
-    ["#FF6B6B", "#E04B4B"]
+    ["#FA5252", "#D23B3B"],
+    ["#FF922B", "#DC6B0E"],
+    ["#F0A500", "#C98700"],
+    ["#37B24D", "#2B8A3E"],
+    ["#12B886", "#0C8F6A"],
+    ["#3B9DF0", "#1C7FD6"],
+    ["#845EF7", "#6741D9"],
+    ["#F368B0", "#D14B92"],
+    ["#20A4F3", "#1184CF"],
+    ["#FF6B6B", "#E04B4B"],
   ];
-  function color(i) { return COLORS[((i % COLORS.length) + COLORS.length) % COLORS.length]; }
+  function color(i) {
+    return COLORS[((i % COLORS.length) + COLORS.length) % COLORS.length];
+  }
 
   /* ---------- sound state (shared across apps) ---------- */
   var soundOn = true;
-  try { soundOn = localStorage.getItem("pop-sound") !== "off"; } catch (e) {}
+  try {
+    soundOn = localStorage.getItem("pop-sound") !== "off";
+  } catch (e) {}
   function setSound(on) {
     soundOn = !!on;
-    try { localStorage.setItem("pop-sound", soundOn ? "on" : "off"); } catch (e) {}
+    try {
+      localStorage.setItem("pop-sound", soundOn ? "on" : "off");
+    } catch (e) {}
     if (!soundOn) cancel();
   }
-  function getSound() { return soundOn; }
+  function getSound() {
+    return soundOn;
+  }
 
   /* ---------- progress store (per-game, per-item mastery) ----------
      Lightweight localStorage record so a future parent view can show
      exactly which letters/words/sounds are sticking. Best-effort. */
   function loadProgress() {
-    try { return JSON.parse(localStorage.getItem("pop-progress") || "{}"); }
-    catch (e) { return {}; }
+    try {
+      return JSON.parse(localStorage.getItem("pop-progress") || "{}");
+    } catch (e) {
+      return {};
+    }
   }
   function recordProgress(game, key, correct) {
     try {
       var p = loadProgress();
       p[game] = p[game] || {};
       var e = p[game][key] || { seen: 0, right: 0 };
-      e.seen++; if (correct) e.right++;
+      e.seen++;
+      if (correct) e.right++;
       p[game][key] = e;
       localStorage.setItem("pop-progress", JSON.stringify(p));
     } catch (e) {}
   }
   function totalCorrect() {
     var p = loadProgress(), n = 0;
-    for (var g in p) for (var k in p[g]) n += (p[g][k].right || 0);
+    for (var g in p) for (var k in p[g]) n += p[g][k].right || 0;
     return n;
   }
-  function resetProgress() { try { localStorage.removeItem("pop-progress"); } catch (e) {} }
+  function resetProgress() {
+    try {
+      localStorage.removeItem("pop-progress");
+    } catch (e) {}
+  }
 
   /* ---------- rewards: a sticker for every few correct answers ---------- */
-  var STICKERS = ["🌟","🦄","🐶","🍦","🚀","🌈","🦖","⚽","🦋","🍩",
-    "🐳","🎈","🏆","🐥","🌻","🦊","🍓","🎸","🐢","👑","🍉","🐬","🌼","🚂"];
+  var STICKERS = [
+    "🌟",
+    "🦄",
+    "🐶",
+    "🍦",
+    "🚀",
+    "🌈",
+    "🦖",
+    "⚽",
+    "🦋",
+    "🍩",
+    "🐳",
+    "🎈",
+    "🏆",
+    "🐥",
+    "🌻",
+    "🦊",
+    "🍓",
+    "🎸",
+    "🐢",
+    "👑",
+    "🍉",
+    "🐬",
+    "🌼",
+    "🚂",
+  ];
   var PER_STICKER = 5;
   function stickersEarned() {
     var n = Math.floor(totalCorrect() / PER_STICKER);
@@ -84,10 +136,13 @@
   /* ---------- speech & voice selection ---------- */
   var voice = null;
   var savedVoiceName = null;
-  try { savedVoiceName = localStorage.getItem("pop-voice"); } catch (e) {}
+  try {
+    savedVoiceName = localStorage.getItem("pop-voice");
+  } catch (e) {}
 
   // Apple "novelty" voices we never want to default to.
-  var SILLY = /^(albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|junior|organ|pipe organ|ralph|fred|superstar|trinoids|whisper|wobble|zarvox|wishing well)/i;
+  var SILLY =
+    /^(albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|junior|organ|pipe organ|ralph|fred|superstar|trinoids|whisper|wobble|zarvox|wishing well)/i;
 
   function scoreVoice(v) {
     var s = 0, n = v.name || "", lang = v.lang || "";
@@ -108,27 +163,42 @@
 
   function englishVoices() {
     if (!("speechSynthesis" in window)) return [];
-    var vs = speechSynthesis.getVoices().filter(function (v) { return /^en/i.test(v.lang); });
-    return vs.sort(function (a, b) { return scoreVoice(b) - scoreVoice(a); });
+    var vs = speechSynthesis.getVoices().filter(function (v) {
+      return /^en/i.test(v.lang);
+    });
+    return vs.sort(function (a, b) {
+      return scoreVoice(b) - scoreVoice(a);
+    });
   }
 
   function pickVoice() {
     if (!("speechSynthesis" in window)) return;
     var vs = speechSynthesis.getVoices();
-    var byName = savedVoiceName && vs.filter(function (v) { return v.name === savedVoiceName; })[0];
+    var byName = savedVoiceName && vs.filter(function (v) {
+      return v.name === savedVoiceName;
+    })[0];
     voice = byName || englishVoices()[0] || vs[0] || null;
   }
   if ("speechSynthesis" in window) {
     pickVoice();
-    speechSynthesis.onvoiceschanged = function () { pickVoice(); if (voiceListEl) renderVoiceList(); };
+    speechSynthesis.onvoiceschanged = function () {
+      pickVoice();
+      if (voiceListEl) renderVoiceList();
+    };
   }
   function setVoiceName(name) {
     savedVoiceName = name;
-    try { localStorage.setItem("pop-voice", name); } catch (e) {}
+    try {
+      localStorage.setItem("pop-voice", name);
+    } catch (e) {}
     pickVoice();
   }
-  function currentVoiceName() { return voice ? voice.name : null; }
-  function cancel() { if ("speechSynthesis" in window) speechSynthesis.cancel(); }
+  function currentVoiceName() {
+    return voice ? voice.name : null;
+  }
+  function cancel() {
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+  }
 
   function utter(text, opts) {
     opts = opts || {};
@@ -143,6 +213,12 @@
     if (!soundOn || !("speechSynthesis" in window) || !text) return;
     cancel();
     speechSynthesis.speak(utter(text, opts));
+  }
+  /* Speak a phoneme/letter-sound. Lower pitch + slower than the word voice so
+     respellings like "buh"/"shh" read as cleanly as the built-in voice allows.
+     (Device TTS can't make truly pure phonemes — recorded clips would.) */
+  function sound(text) {
+    speak(text, { rate: 0.72, pitch: 1.0 });
   }
   /* Play a sample of the current voice — bypasses the mute toggle so it
      can always be previewed from the voice picker. */
@@ -162,7 +238,8 @@
       var p = parts[i++];
       var u = utter(p.text, p);
       u.onend = function () {
-        if (p.gap) setTimeout(next, p.gap); else next();
+        if (p.gap) setTimeout(next, p.gap);
+        else next();
       };
       // guard: if onend never fires, keep things moving
       speechSynthesis.speak(u);
@@ -182,19 +259,30 @@
       s.style.setProperty("--dx", (Math.random() * 120 - 60) + "px");
       s.style.setProperty("--rot", (Math.random() * 180 - 90) + "deg");
       document.body.appendChild(s);
-      (function (node) { setTimeout(function () { node.remove(); }, 950); })(s);
+      (function (node) {
+        setTimeout(function () {
+          node.remove();
+        }, 950);
+      })(s);
     }
   }
 
   /* ---------- keyboard helpers ---------- */
   function onArrows(prev, next, say) {
     document.addEventListener("keydown", function (e) {
-      if (e.key === "ArrowRight") { e.preventDefault(); next(); }
-      else if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
-      else if (e.key === " " || e.key === "Enter") {
-        if (document.activeElement && document.activeElement.tagName === "BUTTON" &&
-            !document.activeElement.classList.contains("card")) return;
-        e.preventDefault(); if (say) say();
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        next();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        prev();
+      } else if (e.key === " " || e.key === "Enter") {
+        if (
+          document.activeElement && document.activeElement.tagName === "BUTTON" &&
+          !document.activeElement.classList.contains("card")
+        ) return;
+        e.preventDefault();
+        if (say) say();
       }
     });
   }
@@ -202,7 +290,9 @@
   /* ---------- PWA wiring (manifest + icons + service worker) ---------- */
   function wirePWA() {
     var head = document.head;
-    function ensure(sel, make) { if (!document.querySelector(sel)) head.appendChild(make()); }
+    function ensure(sel, make) {
+      if (!document.querySelector(sel)) head.appendChild(make());
+    }
     ensure('link[rel="manifest"]', function () {
       return el("link", { rel: "manifest", href: new URL("manifest.webmanifest", ROOT).href });
     });
@@ -226,8 +316,8 @@
       window.addEventListener("load", function () {
         navigator.serviceWorker.register(
           new URL("service-worker.js", ROOT).href,
-          { scope: ROOT.pathname }
-        ).catch(function () { /* offline support is best-effort */ });
+          { scope: ROOT.pathname },
+        ).catch(function () {/* offline support is best-effort */});
       });
     }
   }
@@ -241,7 +331,9 @@
     var list = englishVoices(), cur = currentVoiceName();
     voiceListEl.innerHTML = "";
     if (!list.length) {
-      voiceListEl.appendChild(el("p", { "class": "pop-modal-hint", text: "No voices found on this device yet." }));
+      voiceListEl.appendChild(
+        el("p", { "class": "pop-modal-hint", text: "No voices found on this device yet." }),
+      );
       return;
     }
     list.forEach(function (v) {
@@ -259,26 +351,50 @@
 
   function closeVoiceModal() {
     cancel();
-    if (modalEl) { modalEl.remove(); modalEl = null; voiceListEl = null; }
+    if (modalEl) {
+      modalEl.remove();
+      modalEl = null;
+      voiceListEl = null;
+    }
   }
 
   function openVoiceModal() {
     closeVoiceModal();
     modalEl = el("div", { "class": "pop-modal-backdrop" });
-    var modal = el("div", { "class": "pop-modal", role: "dialog", "aria-label": "Choose a voice", "aria-modal": "true" });
+    var modal = el("div", {
+      "class": "pop-modal",
+      role: "dialog",
+      "aria-label": "Choose a voice",
+      "aria-modal": "true",
+    });
     modal.appendChild(el("h2", { text: "🗣 Choose a voice" }));
-    modal.appendChild(el("p", { "class": "pop-modal-hint", text: "Tap a voice to hear it — your choice is saved for every game." }));
+    modal.appendChild(
+      el("p", {
+        "class": "pop-modal-hint",
+        text: "Tap a voice to hear it — your choice is saved for every game.",
+      }),
+    );
     voiceListEl = el("div", { "class": "pop-voice-list" });
     modal.appendChild(voiceListEl);
-    modal.appendChild(el("p", { "class": "pop-modal-tip",
-      html: "Tip: on iPhone &amp; Mac, download an <b>Enhanced</b> or <b>Premium</b> voice in Settings → Accessibility → Spoken Content — it'll then appear here and sound far more natural." }));
+    modal.appendChild(
+      el("p", {
+        "class": "pop-modal-tip",
+        html:
+          "Tip: on iPhone &amp; Mac, download an <b>Enhanced</b> or <b>Premium</b> voice in Settings → Accessibility → Spoken Content — it'll then appear here and sound far more natural.",
+      }),
+    );
     var done = el("button", { "class": "pop-modal-done", text: "Done" });
     done.addEventListener("click", closeVoiceModal);
     modal.appendChild(done);
     modalEl.appendChild(modal);
-    modalEl.addEventListener("click", function (e) { if (e.target === modalEl) closeVoiceModal(); });
+    modalEl.addEventListener("click", function (e) {
+      if (e.target === modalEl) closeVoiceModal();
+    });
     document.addEventListener("keydown", function esc(e) {
-      if (e.key === "Escape") { closeVoiceModal(); document.removeEventListener("keydown", esc); }
+      if (e.key === "Escape") {
+        closeVoiceModal();
+        document.removeEventListener("keydown", esc);
+      }
     });
     document.body.appendChild(modalEl);
     renderVoiceList();
@@ -288,12 +404,22 @@
     if (document.getElementById("popVoiceBtn")) return;
     var controls = document.querySelector(".controls"), btn;
     if (controls) {
-      btn = el("button", { "class": "ctrl", id: "popVoiceBtn", "aria-label": "Choose a voice", text: "🗣 Voice" });
+      btn = el("button", {
+        "class": "ctrl",
+        id: "popVoiceBtn",
+        "aria-label": "Choose a voice",
+        text: "🗣 Voice",
+      });
       controls.appendChild(btn);
     } else {
       var row = document.querySelector(".installRow");
       if (!row) return;
-      btn = el("button", { "class": "install", id: "popVoiceBtn", "aria-label": "Choose a voice", text: "🗣 Choose a voice" });
+      btn = el("button", {
+        "class": "install",
+        id: "popVoiceBtn",
+        "aria-label": "Choose a voice",
+        text: "🗣 Choose a voice",
+      });
       btn.style.display = "inline-flex";
       row.appendChild(btn);
     }
@@ -308,34 +434,56 @@
     var m = location.pathname.match(/\/apps\/([^\/]+?)\.html$/i);
     if (!m) return;
     var slug = m[1];
-    function pad(n){ return n < 10 ? "0" + n : "" + n; }
-    function today(){ var d = new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+    function pad(n) {
+      return n < 10 ? "0" + n : "" + n;
+    }
+    function today() {
+      var d = new Date();
+      return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    }
     function bump() {
       try {
         var t = today();
         var a = JSON.parse(localStorage.getItem("pop-activity") || "{}");
         a[t] = a[t] || {};
-        if ((a[t][slug] || 0) >= 12) return;            // enough for today; stop writing
+        if ((a[t][slug] || 0) >= 12) return; // enough for today; stop writing
         a[t][slug] = (a[t][slug] || 0) + 1;
         var keys = Object.keys(a).sort();
         while (keys.length > 14) delete a[keys.shift()]; // keep ~2 weeks
         localStorage.setItem("pop-activity", JSON.stringify(a));
       } catch (e) {}
     }
-    bump();                                              // opening counts as a touch
+    bump(); // opening counts as a touch
     document.addEventListener("click", bump, true);
   })();
 
   global.Pop = {
     ROOT: ROOT,
-    $: $, el: el, shuffle: shuffle,
-    COLORS: COLORS, color: color,
-    speak: speak, speakSeq: speakSeq, cancel: cancel,
-    sampleVoice: sampleVoice, englishVoices: englishVoices,
-    setVoiceName: setVoiceName, currentVoiceName: currentVoiceName, openVoiceModal: openVoiceModal,
-    setSound: setSound, getSound: getSound,
+    $: $,
+    el: el,
+    shuffle: shuffle,
+    COLORS: COLORS,
+    color: color,
+    speak: speak,
+    sound: sound,
+    speakSeq: speakSeq,
+    cancel: cancel,
+    sampleVoice: sampleVoice,
+    englishVoices: englishVoices,
+    setVoiceName: setVoiceName,
+    currentVoiceName: currentVoiceName,
+    openVoiceModal: openVoiceModal,
+    setSound: setSound,
+    getSound: getSound,
     progress: { all: loadProgress, record: recordProgress, totalCorrect: totalCorrect, reset: resetProgress },
-    stickers: { earned: stickersEarned, all: function () { return STICKERS.slice(); }, per: PER_STICKER },
-    sparkle: sparkle, onArrows: onArrows
+    stickers: {
+      earned: stickersEarned,
+      all: function () {
+        return STICKERS.slice();
+      },
+      per: PER_STICKER,
+    },
+    sparkle: sparkle,
+    onArrows: onArrows,
   };
 })(window);
