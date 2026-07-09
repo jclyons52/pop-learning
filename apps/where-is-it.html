@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Where Is It? · Pop Learning</title>
+<link rel="stylesheet" href="../shared/pop.css" />
+<style>
+  .options { display: flex; gap: 20px; justify-content: center; width: 100%; max-width: 600px; margin: 0 auto; }
+  .card { flex: 1; min-height: 200px; display: flex; align-items: center; justify-content: center; font-size: clamp(4rem, 20vw, 8rem); line-height: 1; transition: transform 0.2s; }
+  .card:active { transform: translateY(8px); }
+  .card.wrong { animation: shake 0.4s; opacity: 0.7; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-10px); }
+    40%, 80% { transform: translateX(10px); }
+  }
+  .question-area { text-align: center; margin-bottom: 30px; }
+  .question-text { font-size: clamp(1.5rem, 6vw, 2.5rem); font-weight: 700; color: var(--ink); }
+  .target-word { color: var(--ink); text-decoration: underline; text-decoration-color: var(--c-light, #ccc); text-decoration-thickness: 4px; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="home" href="../index.html" aria-label="Back to all apps">🏠</a>
+      <div class="titles">
+        <h1>Where Is It?</h1>
+        <p>Listen and find the right picture</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="soundBtn" aria-pressed="true" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main class="stage" style="justify-content: center;">
+    <div class="question-area" id="questionArea">
+      <button class="say" id="repeatBtn" aria-label="Repeat question" style="margin-bottom:15px; transform:scale(1.2);">🔊</button>
+      <div class="question-text">Where is the <span class="target-word" id="targetWord"></span>?</div>
+    </div>
+
+    <div class="options" id="options">
+      <button class="card pop" id="opt0" aria-label="Option 1"></button>
+      <button class="card pop" id="opt1" aria-label="Option 2"></button>
+    </div>
+    <div class="tap-hint">👆 tap the right picture</div>
+  </main>
+
+  <footer class="bottom">
+    <div class="progress" style="margin-top:20px; width:100%; max-width:400px; margin-left:auto; margin-right:auto;"><i id="bar"></i></div>
+  </footer>
+
+<script src="../shared/pop.js"></script>
+<script src="../shared/data.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = Pop.$;
+  var WORDS = Pop.data.firstWords;
+  var streak = 0;
+  var targetItem = null;
+  var options = [];
+  
+  var optBtns = [$("opt0"), $("opt1")];
+  var targetWordEl = $("targetWord");
+  var bar = $("bar");
+
+  function pickItems() {
+    var shuffled = Pop.shuffle(WORDS.slice());
+    options = [shuffled[0], shuffled[1]];
+    targetItem = options[Math.floor(Math.random() * 2)];
+  }
+
+  function render(animate){
+    targetWordEl.textContent = targetItem[0];
+    
+    // Assign colors
+    var cols = [Pop.color(Math.floor(Math.random()*10)), Pop.color(Math.floor(Math.random()*10))];
+    
+    for(var i=0; i<2; i++){
+      var btn = optBtns[i];
+      btn.textContent = options[i][1];
+      btn.classList.remove("wrong");
+      btn.style.setProperty("--c", cols[i][0]);
+      btn.style.setProperty("--c-dark", cols[i][1]);
+      if(animate){ btn.classList.remove("pop"); void btn.offsetWidth; btn.classList.add("pop"); }
+    }
+    
+    var pct = Math.min((streak / 5) * 100, 100);
+    bar.style.width = pct + "%";
+  }
+
+  function askQuestion(){ 
+    Pop.speak("Where is the " + targetItem[0] + "?"); 
+  }
+
+  function nextRound() {
+    pickItems();
+    render(true);
+    setTimeout(askQuestion, 500);
+  }
+
+  function handleTap(idx) {
+    var btn = optBtns[idx];
+    if (btn.classList.contains("wrong")) return;
+    
+    if (options[idx] === targetItem) {
+      // Correct!
+      Pop.sparkle(btn);
+      Pop.speak(targetItem[0] + "!");
+      streak++;
+      Pop.progress.record("where-is-it", targetItem[0], true);
+      
+      // Prevent double taps
+      optBtns[0].disabled = true;
+      optBtns[1].disabled = true;
+      
+      setTimeout(function() {
+        optBtns[0].disabled = false;
+        optBtns[1].disabled = false;
+        if (streak >= 5) {
+          streak = 0; // wrap around for endless play
+        }
+        nextRound();
+      }, 1500);
+    } else {
+      // Wrong
+      btn.classList.add("wrong");
+      Pop.speak("No, that's a " + options[idx][0] + ". Try again!");
+      Pop.progress.record("where-is-it", targetItem[0], false);
+    }
+  }
+
+  optBtns[0].addEventListener("click", function(){ handleTap(0); });
+  optBtns[1].addEventListener("click", function(){ handleTap(1); });
+  $("repeatBtn").addEventListener("click", askQuestion);
+
+  var soundBtn = $("soundBtn");
+  soundBtn.setAttribute("aria-pressed", String(Pop.getSound()));
+  soundBtn.innerHTML = Pop.getSound() ? "🔊 Sound" : "🔇 Sound";
+  soundBtn.addEventListener("click", function(){
+    var on = !Pop.getSound(); Pop.setSound(on);
+    this.setAttribute("aria-pressed", String(on));
+    this.innerHTML = on ? "🔊 Sound" : "🔇 Sound";
+  });
+
+  nextRound();
+})();
+</script>
+</body>
+</html>

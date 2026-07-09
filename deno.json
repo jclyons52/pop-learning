@@ -9,6 +9,7 @@
     "validate": "deno run --allow-read scripts/validate.ts",
     "stamp": "deno run --allow-read --allow-write scripts/stamp-sw.ts",
     "split": "deno run --allow-read --allow-write scripts/split-audio.ts",
+    "dev": "deno run --allow-net --allow-read jsr:@std/http/file-server",
     "all": "deno task fmt:check && deno task syntax && deno task validate && deno task test && deno task check"
   },
   "fmt": {

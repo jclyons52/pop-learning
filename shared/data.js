@@ -357,6 +357,57 @@
     { name: "heart" },
   ];
 
+  // --- Toddler & First Words Data ---
+  var animals = [
+    ["pig", "🐷"],
+    ["cow", "🐄"],
+    ["dog", "🐶"],
+    ["cat", "🐱"],
+    ["bird", "🐦"],
+    ["duck", "🦆"],
+    ["frog", "🐸"],
+    ["horse", "🐴"],
+    ["monkey", "🐵"],
+    ["lion", "🦁"],
+    ["tiger", "🐯"],
+    ["bear", "🐻"],
+    ["fish", "🐟"],
+    ["sheep", "🐑"],
+    ["mouse", "🐭"],
+    ["elephant", "🐘"]
+  ];
+
+  var colors = [
+    ["red", "#ff4d4d"],
+    ["blue", "#4d94ff"],
+    ["yellow", "#ffcc00"],
+    ["green", "#33cc33"],
+    ["orange", "#ff9933"],
+    ["purple", "#9933ff"],
+    ["pink", "#ff66b3"],
+    ["brown", "#8b4513"],
+    ["black", "#000000"],
+    ["white", "#ffffff"]
+  ];
+
+  var firstWords = [
+    ["apple", "🍎"],
+    ["car", "🚗"],
+    ["ball", "⚽"],
+    ["bed", "🛏️"],
+    ["shoe", "👟"],
+    ["hat", "🎩"],
+    ["book", "📕"],
+    ["milk", "🥛"],
+    ["tree", "🌳"],
+    ["sun", "☀️"],
+    ["moon", "🌙"],
+    ["star", "⭐"],
+    ["house", "🏠"],
+    ["train", "🚂"],
+    ["boat", "⛵"]
+  ].concat(animals); // Also include animals in 'first words'
+
   global.Pop = global.Pop || {};
   global.Pop.data = {
     letters: letters,
@@ -374,5 +425,8 @@
     numberWords: numberWords,
     countObjects: countObjects,
     shapes: shapes,
+    animals: animals,
+    colors: colors,
+    firstWords: firstWords,
   };
 })(window);
