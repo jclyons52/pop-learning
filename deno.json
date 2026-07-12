@@ -4,12 +4,12 @@
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
     "check": "deno check shared/globals.d.ts shared/plan-core.js shared/plan.js shared/data.js shared/pop.js scripts/lib.ts scripts/validate.ts scripts/stamp-sw.ts scripts/syntax-check.ts scripts/split-audio.ts tests/plan-core.test.ts",
-    "test": "deno test --no-check tests/plan-core.test.ts",
+    "test": "deno test --no-check tests/plan-core.test.ts && deno test -A --unstable-kv tests/server.test.ts",
     "syntax": "deno run --allow-read scripts/syntax-check.ts",
     "validate": "deno run --allow-read scripts/validate.ts",
     "stamp": "deno run --allow-read --allow-write scripts/stamp-sw.ts",
     "split": "deno run --allow-read --allow-write scripts/split-audio.ts",
-    "dev": "deno run --allow-net --allow-read jsr:@std/http/file-server",
+    "dev": "deno run -A --unstable-kv --watch server.tsx",
     "all": "deno task fmt:check && deno task syntax && deno task validate && deno task test && deno task check"
   },
   "fmt": {
@@ -19,7 +19,7 @@
   },
   "compilerOptions": {
     "checkJs": true,
-    "lib": ["deno.ns", "dom", "es2020"],
+    "lib": ["deno.ns", "dom", "es2020", "deno.unstable"],
     "noImplicitAny": false
   }
 }

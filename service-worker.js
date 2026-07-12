@@ -85,6 +85,11 @@ self.addEventListener("fetch", function (e) {
   var url = new URL(req.url);
   var sameOrigin = url.origin === self.location.origin;
 
+  // Bypass cache for dynamic server routes
+  if (sameOrigin && (url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/api') || url.pathname.startsWith('/login'))) {
+    return;
+  }
+
   // App shell (same-origin): cache-first, fall back to network and cache it.
   if (sameOrigin) {
     e.respondWith(

@@ -79,6 +79,41 @@
       return {};
     }
   }
+  function syncProgress(p) {
+    if (!navigator.onLine) return;
+    var studentId = localStorage.getItem("pop-student-id");
+    if (!studentId) return; // Only sync if linked to a dashboard!
+
+    fetch("/api/progress", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "X-Student-ID": studentId 
+      },
+      body: JSON.stringify(p)
+    }).catch(function(){});
+  }
+
+  function linkDevice(code, callback) {
+    fetch("/api/link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code })
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error("Invalid link code");
+      return res.json();
+    })
+    .then(function(data) {
+      localStorage.setItem("pop-student-id", data.studentId);
+      syncProgress(loadProgress()); // Sync existing progress immediately
+      if (callback) callback(null, data);
+    })
+    .catch(function(err) {
+      if (callback) callback(err.message);
+    });
+  }
+
   function recordProgress(game, key, correct) {
     try {
       var p = loadProgress();
@@ -88,10 +123,12 @@
       if (correct) e.right++;
       p[game][key] = e;
       localStorage.setItem("pop-progress", JSON.stringify(p));
+      syncProgress(p);
     } catch (e) {}
   }
-  function totalCorrect() {
-    var p = loadProgress(), n = 0;
+  function totalCorrect(p) {
+    p = p || loadProgress();
+    var n = 0;
     for (var g in p) for (var k in p[g]) n += p[g][k].right || 0;
     return n;
   }
@@ -129,9 +166,11 @@
     "🚂",
   ];
   var PER_STICKER = 5;
-  function stickersEarned() {
-    var n = Math.floor(totalCorrect() / PER_STICKER);
-    return STICKERS.slice(0, Math.min(n, STICKERS.length));
+  function stickersEarned(p) {
+    var total = totalCorrect(p);
+    var max = STICKERS.length;
+    var count = Math.min(Math.floor(total / PER_STICKER), max);
+    return STICKERS.slice(0, count);
   }
 
   /* ---------- speech & voice selection ---------- */
@@ -510,7 +549,7 @@
     openVoiceModal: openVoiceModal,
     setSound: setSound,
     getSound: getSound,
-    progress: { all: loadProgress, record: recordProgress, totalCorrect: totalCorrect, reset: resetProgress },
+    progress: { all: loadProgress, record: recordProgress, totalCorrect: totalCorrect, reset: resetProgress, linkDevice: linkDevice },
     stickers: {
       earned: stickersEarned,
       all: function () {
