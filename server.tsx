@@ -2,11 +2,17 @@
 /** @jsxFrag Fragment */
 import { Hono } from "npm:hono";
 import { serveStatic } from "npm:hono/deno";
-import { getCookie, setCookie, deleteCookie } from "npm:hono/cookie";
-import { jsx, Fragment } from "npm:hono/jsx";
+import { deleteCookie, getCookie, setCookie } from "npm:hono/cookie";
+import { Fragment, jsx } from "npm:hono/jsx";
 
 const app = new Hono();
 const kv = await Deno.openKv();
+
+// Read the parent password from the environment. In local dev (no env set) it
+// falls back to "demo" so things keep working; on Deno Deploy set POP_PASSWORD
+// to a real secret. The parent id likewise defaults for dev.
+const PASSWORD = Deno.env.get("POP_PASSWORD") || (Deno.env.get("DENO_DEPLOYMENT_ID") ? "" : "demo");
+const PARENT_ID = Deno.env.get("POP_PARENT_ID") || "parent-1";
 
 // Basic Layout Component
 const Layout = (props: { title: string; children?: any }) => (
@@ -55,19 +61,21 @@ app.get("/login", (c) => {
     <Layout title="Login">
       <div class="dashboard-card">
         <h2>Parent / Teacher Login</h2>
-        <p>Use password <strong>demo</strong> to login.</p>
+        {PASSWORD === ""
+          ? <p style="color: #c00;">No POP_PASSWORD env var set — login disabled.</p>
+          : <p>Enter the parent password to continue.</p>}
         <form method="post" action="/login">
           <input type="password" name="password" placeholder="Password" />
           <button type="submit">Login</button>
         </form>
       </div>
-    </Layout>
+    </Layout>,
   );
 });
 
 app.post("/login", async (c) => {
   const body = await c.req.parseBody();
-  if (body.password === "demo") {
+  if (PASSWORD !== "" && body.password === PASSWORD) {
     setCookie(c, "session_id", "demo-session");
     return c.redirect("/dashboard");
   }
@@ -76,7 +84,7 @@ app.post("/login", async (c) => {
 
 app.get("/dashboard", authMiddleware, async (c) => {
   // Fetch students for the demo parent
-  const parentId = "parent-1";
+  const parentId = PARENT_ID;
   const studentsIter = kv.list({ prefix: ["students", parentId] });
   const students: any[] = [];
   for await (const res of studentsIter) students.push(res);
@@ -90,7 +98,9 @@ app.get("/dashboard", authMiddleware, async (c) => {
             {students.map((s) => (
               <li style="margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem;">
                 <strong style="font-size: 1.2rem; min-width: 100px;">{s.value.name}</strong>
-                <span>Link Code: <span class="link-code">{s.value.code}</span></span>
+                <span>
+                  Link Code: <span class="link-code">{s.value.code}</span>
+                </span>
                 <a href={`/dashboard/student/${s.value.id}`} style="margin-left: auto;">View Progress</a>
               </li>
             ))}
@@ -103,50 +113,58 @@ app.get("/dashboard", authMiddleware, async (c) => {
           <button type="submit">Add Student</button>
         </form>
       </div>
-    </Layout>
+    </Layout>,
   );
 });
 
 app.post("/dashboard/student", authMiddleware, async (c) => {
   const body = await c.req.parseBody();
   const name = body.name;
-  const parentId = "parent-1";
+  const parentId = PARENT_ID;
   const studentId = crypto.randomUUID();
   const code = Math.random().toString(36).substring(2, 6).toUpperCase(); // e.g. "ABCD"
-  
+
   await kv.set(["students", parentId, studentId], { id: studentId, name, code, parentId });
   await kv.set(["link_codes", code], studentId);
-  
+
   return c.redirect("/dashboard");
 });
 
 app.get("/dashboard/student/:id", authMiddleware, async (c) => {
   const studentId = c.req.param("id");
-  const parentId = "parent-1";
-  
+  const parentId = PARENT_ID;
+
   const [studentRes, progressRes] = await Promise.all([
     kv.get(["students", parentId, studentId]),
-    kv.get(["progress", studentId])
+    kv.get(["progress", studentId]),
   ]);
-  
+
   const student = (studentRes.value as any) || { name: "Unknown Student" };
   const pData = progressRes.value || {};
-  
+
   return c.html(
     <Layout title={`${student.name}'s Progress`}>
       <script src="/shared/pop.js"></script>
       <script src="/shared/parent-ui.js"></script>
-      <script dangerouslySetInnerHTML={{ __html: `window.STUDENT_PROGRESS = ${JSON.stringify(pData)};` }}></script>
-      
+      <script dangerouslySetInnerHTML={{ __html: `window.STUDENT_PROGRESS = ${JSON.stringify(pData)};` }}>
+      </script>
+
       <div style="margin-bottom: 2rem;">
-        <a href="/dashboard" style="text-decoration: none; font-weight: bold; color: var(--ink-soft);">← Back to Dashboard</a>
+        <a href="/dashboard" style="text-decoration: none; font-weight: bold; color: var(--ink-soft);">
+          ← Back to Dashboard
+        </a>
         <h2 style="margin-top: 1rem; font-size: 2rem;">{student.name}'s Progress</h2>
       </div>
-      
+
       <div id="progress-root"></div>
-      
-      <script dangerouslySetInnerHTML={{ __html: `Pop.renderParentUI(window.STUDENT_PROGRESS, document.getElementById("progress-root"));` }}></script>
-    </Layout>
+
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `Pop.renderParentUI(window.STUDENT_PROGRESS, document.getElementById("progress-root"));`,
+        }}
+      >
+      </script>
+    </Layout>,
   );
 });
 
@@ -164,7 +182,7 @@ app.post("/api/link", async (c) => {
 app.post("/api/progress", async (c) => {
   const studentId = c.req.header("X-Student-ID");
   if (!studentId) return c.json({ error: "Unlinked device" }, 400);
-  
+
   const body = await c.req.json();
   await kv.set(["progress", studentId], body);
   return c.json({ success: true });

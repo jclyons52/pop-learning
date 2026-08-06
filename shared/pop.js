@@ -86,32 +86,32 @@
 
     fetch("/api/progress", {
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
-        "X-Student-ID": studentId 
+        "X-Student-ID": studentId,
       },
-      body: JSON.stringify(p)
-    }).catch(function(){});
+      body: JSON.stringify(p),
+    }).catch(function () {});
   }
 
   function linkDevice(code, callback) {
     fetch("/api/link", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: code })
+      body: JSON.stringify({ code: code }),
     })
-    .then(function(res) {
-      if (!res.ok) throw new Error("Invalid link code");
-      return res.json();
-    })
-    .then(function(data) {
-      localStorage.setItem("pop-student-id", data.studentId);
-      syncProgress(loadProgress()); // Sync existing progress immediately
-      if (callback) callback(null, data);
-    })
-    .catch(function(err) {
-      if (callback) callback(err.message);
-    });
+      .then(function (res) {
+        if (!res.ok) throw new Error("Invalid link code");
+        return res.json();
+      })
+      .then(function (data) {
+        localStorage.setItem("pop-student-id", data.studentId);
+        syncProgress(loadProgress()); // Sync existing progress immediately
+        if (callback) callback(null, data);
+      })
+      .catch(function (err) {
+        if (callback) callback(err.message);
+      });
   }
 
   function recordProgress(game, key, correct) {
@@ -549,7 +549,13 @@
     openVoiceModal: openVoiceModal,
     setSound: setSound,
     getSound: getSound,
-    progress: { all: loadProgress, record: recordProgress, totalCorrect: totalCorrect, reset: resetProgress, linkDevice: linkDevice },
+    progress: {
+      all: loadProgress,
+      record: recordProgress,
+      totalCorrect: totalCorrect,
+      reset: resetProgress,
+      linkDevice: linkDevice,
+    },
     stickers: {
       earned: stickersEarned,
       all: function () {

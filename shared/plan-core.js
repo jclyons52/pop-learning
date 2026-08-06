@@ -28,6 +28,9 @@
 
   /** @type {Record<string, Game>} */
   var GAMES = {
+    "animal-pop": { name: "Animal Pop", gid: null, kind: "flash" },
+    "color-pop": { name: "Color Splat", gid: null, kind: "flash" },
+    "where-is-it": { name: "Where Is It?", gid: "where-is-it", kind: "recall" },
     "alphabet-pop": { name: "Alphabet Pop", gid: null, kind: "flash" },
     "sound-match": { name: "Sound Match", gid: "sound-match", kind: "recall" },
     "first-sounds": { name: "First Sounds", gid: "first-sounds", kind: "recall" },

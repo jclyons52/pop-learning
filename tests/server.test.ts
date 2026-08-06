@@ -42,9 +42,9 @@ Deno.test("Dashboard integration flow: Create student -> Link -> Sync progress",
   // 1. Create student
   const createStudentReq = new Request("http://localhost/dashboard/student", {
     method: "POST",
-    headers: { 
+    headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      "Cookie": "session_id=demo-session"
+      "Cookie": "session_id=demo-session",
     },
     body: "name=IntegrationTestStudent",
   });
@@ -54,16 +54,16 @@ Deno.test("Dashboard integration flow: Create student -> Link -> Sync progress",
 
   // 2. Fetch dashboard to find the link code (hacky but works for integration)
   const dashReq = new Request("http://localhost/dashboard", {
-    headers: { "Cookie": "session_id=demo-session" }
+    headers: { "Cookie": "session_id=demo-session" },
   });
   const dashRes = await app.request(dashReq);
   const dashHtml = await dashRes.text();
-  
+
   // Extract link code using regex: <span class="link-code">XXXX</span>
   // Since we might have multiple students, let's just grab the last one created
   const matches = [...dashHtml.matchAll(/<span class="link-code">([A-Z0-9]{4})<\/span>/g)];
   const linkCode = matches[matches.length - 1][1];
-  
+
   // 3. Link device via /api/link
   const linkReq = new Request("http://localhost/api/link", {
     method: "POST",
@@ -74,13 +74,13 @@ Deno.test("Dashboard integration flow: Create student -> Link -> Sync progress",
   assertEquals(linkRes.status, 200);
   const linkData = await linkRes.json();
   const studentId = linkData.studentId;
-  
+
   // 4. Sync progress via /api/progress
   const progressReq = new Request("http://localhost/api/progress", {
     method: "POST",
-    headers: { 
+    headers: {
       "Content-Type": "application/json",
-      "X-Student-ID": studentId
+      "X-Student-ID": studentId,
     },
     body: JSON.stringify({ "test-game": { "test-item": { seen: 1, right: 1 } } }),
   });
@@ -88,10 +88,10 @@ Deno.test("Dashboard integration flow: Create student -> Link -> Sync progress",
   assertEquals(progressRes.status, 200);
   const progressData = await progressRes.json();
   assertEquals(progressData.success, true);
-  
+
   // 5. Verify progress in dashboard
   const studentDashReq = new Request(`http://localhost/dashboard/student/${studentId}`, {
-    headers: { "Cookie": "session_id=demo-session" }
+    headers: { "Cookie": "session_id=demo-session" },
   });
   const studentDashRes = await app.request(studentDashReq);
   const studentDashHtml = await studentDashRes.text();

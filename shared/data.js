@@ -374,7 +374,7 @@
     ["fish", "🐟"],
     ["sheep", "🐑"],
     ["mouse", "🐭"],
-    ["elephant", "🐘"]
+    ["elephant", "🐘"],
   ];
 
   var colors = [
@@ -387,7 +387,7 @@
     ["pink", "#ff66b3"],
     ["brown", "#8b4513"],
     ["black", "#000000"],
-    ["white", "#ffffff"]
+    ["white", "#ffffff"],
   ];
 
   var firstWords = [
@@ -405,7 +405,7 @@
     ["star", "⭐"],
     ["house", "🏠"],
     ["train", "🚂"],
-    ["boat", "⛵"]
+    ["boat", "⛵"],
   ].concat(animals); // Also include animals in 'first words'
 
   global.Pop = global.Pop || {};

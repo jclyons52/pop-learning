@@ -6,7 +6,7 @@ var VERSION = "pop-v7";
 // ASSETS_HASH is a digest of every precached file, written by `deno task stamp`.
 // Because the cache name includes it, the cache busts automatically whenever
 // any asset changes — CI fails if this is stale (see tests/validate.js).
-var ASSETS_HASH = "6f7f23b385";
+var ASSETS_HASH = "0e451737c3";
 var CACHE = "pop-cache-" + VERSION + "-" + ASSETS_HASH;
 
 // All paths are relative to this script (the repo root).
@@ -86,7 +86,11 @@ self.addEventListener("fetch", function (e) {
   var sameOrigin = url.origin === self.location.origin;
 
   // Bypass cache for dynamic server routes
-  if (sameOrigin && (url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/api') || url.pathname.startsWith('/login'))) {
+  if (
+    sameOrigin &&
+    (url.pathname.startsWith("/dashboard") || url.pathname.startsWith("/api") ||
+      url.pathname.startsWith("/login"))
+  ) {
     return;
   }
 

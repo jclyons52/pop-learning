@@ -18,7 +18,7 @@
     "phonics-check": "Phonics Check",
     "speed": "Speed Words",
     "story": "Story Pop",
-    "magic-e": "Magic e"
+    "magic-e": "Magic e",
   };
 
   function prettify(id) {
@@ -45,12 +45,12 @@
 
     // --- 1) Summary Strip ---
     var summary = Pop.el("section", { "class": "summary", "aria-label": "Summary" });
-    
+
     var correctStat = Pop.el("div", { "class": "stat" });
     var totalCorrect = Pop.progress.totalCorrect(progress);
     correctStat.appendChild(Pop.el("span", { "class": "num", text: totalCorrect }));
     correctStat.appendChild(Pop.el("span", { "class": "lbl", text: "Correct answers" }));
-    
+
     var gamesStat = Pop.el("div", { "class": "stat" });
     gamesStat.appendChild(Pop.el("span", { "class": "num", text: gameIds.length }));
     gamesStat.appendChild(Pop.el("span", { "class": "lbl", text: "Games played" }));
@@ -69,9 +69,11 @@
     var shelfPanel = Pop.el("section", { "class": "panel", style: "margin-top: clamp(16px, 3vh, 24px);" });
     shelfPanel.appendChild(Pop.el("h2", { text: "🏅 Sticker shelf" }));
     if (!earned.length) {
-      shelfPanel.appendChild(Pop.el("p", { "class": "sub", text: "No stickers yet — every bit of practice fills the shelf." }));
+      shelfPanel.appendChild(
+        Pop.el("p", { "class": "sub", text: "No stickers yet — every bit of practice fills the shelf." }),
+      );
     }
-    
+
     var shelf = Pop.el("div", { "class": "shelf" });
     var allStickers = Pop.stickers.all();
     allStickers.forEach(function (emoji, i) {
@@ -82,26 +84,31 @@
       shelf.appendChild(slot);
     });
     shelfPanel.appendChild(shelf);
-    shelfPanel.appendChild(Pop.el("p", { 
-      "class": "shelf-caption", 
+    shelfPanel.appendChild(Pop.el("p", {
+      "class": "shelf-caption",
       text: "A sticker every " + Pop.stickers.per + " correct answers.",
-      style: "font-size: 0.8rem; color: var(--ink-soft); margin-top: 10px;"
+      style: "font-size: 0.8rem; color: var(--ink-soft); margin-top: 10px;",
     }));
     container.appendChild(shelfPanel);
 
     // --- 3) Letter-sounds heat grid ---
     var heatPanel = Pop.el("section", { "class": "panel", style: "margin-top: clamp(16px, 3vh, 24px);" });
     heatPanel.appendChild(Pop.el("h2", { text: "🔤 Letter sounds A–Z" }));
-    heatPanel.appendChild(Pop.el("p", { "class": "sub", text: "A quick look at which sounds are sticking, across the sound games." }));
-    
+    heatPanel.appendChild(
+      Pop.el("p", {
+        "class": "sub",
+        text: "A quick look at which sounds are sticking, across the sound games.",
+      }),
+    );
+
     var heat = Pop.el("div", { "class": "heat" });
     ALPHA.forEach(function (L) {
       var seen = 0, right = 0;
       SOUND_GAMES.forEach(function (gid) {
         var game = progress[gid];
         if (game && game[L]) {
-          seen += (game[L].seen || 0);
-          right += (game[L].right || 0);
+          seen += game[L].seen || 0;
+          right += game[L].right || 0;
         }
       });
       var cls = "cold";
@@ -109,25 +116,30 @@
       else if (seen >= 1) cls = "shaky";
       var cell = Pop.el("div", { "class": "cell " + cls });
       cell.textContent = L.toLowerCase();
-      cell.setAttribute("title",
-        cls === "cold" ? L + " — not tried yet"
-          : L + " — " + right + "/" + seen + " correct");
+      cell.setAttribute(
+        "title",
+        cls === "cold" ? L + " — not tried yet" : L + " — " + right + "/" + seen + " correct",
+      );
       heat.appendChild(cell);
     });
     heatPanel.appendChild(heat);
-    
+
     var legend = Pop.el("div", { "class": "legend" });
-    legend.innerHTML = '<span><i class="dot good"></i> Sticking</span> <span><i class="dot shaky"></i> Still learning</span> <span><i class="dot cold"></i> Not tried yet</span>';
+    legend.innerHTML =
+      '<span><i class="dot good"></i> Sticking</span> <span><i class="dot shaky"></i> Still learning</span> <span><i class="dot cold"></i> Not tried yet</span>';
     heatPanel.appendChild(legend);
     container.appendChild(heatPanel);
 
     // --- 4) Per-game table ---
     var tablePanel = Pop.el("section", { "class": "panel", style: "margin-top: clamp(16px, 3vh, 24px);" });
     tablePanel.appendChild(Pop.el("h2", { text: "🎲 Each game" }));
-    tablePanel.appendChild(Pop.el("p", { "class": "sub", text: "Attempts, correct answers and accuracy so far." }));
+    tablePanel.appendChild(
+      Pop.el("p", { "class": "sub", text: "Attempts, correct answers and accuracy so far." }),
+    );
 
     var table = Pop.el("table", { "class": "games" });
-    table.innerHTML = '<thead><tr><th>Game</th><th class="right">Tries</th><th class="right">Right</th><th class="right">Accuracy</th></tr></thead>';
+    table.innerHTML =
+      '<thead><tr><th>Game</th><th class="right">Tries</th><th class="right">Right</th><th class="right">Accuracy</th></tr></thead>';
     var tbody = Pop.el("tbody");
 
     var rowIds = [];
@@ -146,8 +158,8 @@
       var seen = 0, right = 0;
       for (var key in game) {
         if (game.hasOwnProperty(key)) {
-          seen += (game[key].seen || 0);
-          right += (game[key].right || 0);
+          seen += game[key].seen || 0;
+          right += game[key].right || 0;
         }
       }
       var acc = seen ? Math.round((right / seen) * 100) : null;
@@ -177,10 +189,11 @@
     table.appendChild(tbody);
     tablePanel.appendChild(table);
     container.appendChild(tablePanel);
-    
+
     // --- 5) Reassuring note ---
     var note = Pop.el("section", { "class": "note", style: "margin-top: clamp(16px, 3vh, 24px);" });
-    note.innerHTML = "<b>How to use Pop Learning:</b> little and often works best — a few minutes a day beats a long session. Celebrate the effort rather than the score, and let her tap freely and explore; there's no way to get it wrong here. The numbers above are just for you — they're a gentle guide, not a report card.";
+    note.innerHTML =
+      "<b>How to use Pop Learning:</b> little and often works best — a few minutes a day beats a long session. Celebrate the effort rather than the score, and let her tap freely and explore; there's no way to get it wrong here. The numbers above are just for you — they're a gentle guide, not a report card.";
     container.appendChild(note);
   };
 })(window);
