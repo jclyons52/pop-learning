@@ -94,6 +94,16 @@
     }).catch(function () {});
   }
 
+  // Re-sync when connectivity returns so offline play still reaches the
+  // dashboard. Best-effort; fires once per reconnection.
+  function armOnlineResync() {
+    if (!("addEventListener" in window)) return;
+    window.addEventListener("online", function () {
+      syncProgress(loadProgress());
+    });
+  }
+  armOnlineResync();
+
   function linkDevice(code, callback) {
     fetch("/api/link", {
       method: "POST",

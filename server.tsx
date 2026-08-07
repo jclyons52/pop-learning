@@ -1,6 +1,7 @@
 /** @jsx jsx */
 /** @jsxFrag Fragment */
 import { Hono } from "npm:hono";
+import { HTTPException } from "npm:hono/http-exception";
 import { serveStatic } from "npm:hono/deno";
 import { deleteCookie, getCookie, setCookie } from "npm:hono/cookie";
 import { Fragment, jsx } from "npm:hono/jsx";
@@ -37,7 +38,17 @@ const Layout = (props: { title: string; children?: any }) => (
       <div class="dashboard-container">
         <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; color: #333;">
           <h1 style="margin: 0;">🎈 Pop Learning Dashboard</h1>
-          <a href="/" style="color: var(--ink);">Back to Game</a>
+          <div style="display: flex; gap: 1rem; align-items: center;">
+            <a href="/" style="color: var(--ink);">Back to Game</a>
+            <form method="post" action="/logout" style="margin: 0;">
+              <button
+                type="submit"
+                style="background: var(--c4, #999); padding: 0.3rem 0.8rem; font-size: 0.85rem;"
+              >
+                Log out
+              </button>
+            </form>
+          </div>
         </header>
         {props.children}
       </div>
@@ -45,14 +56,64 @@ const Layout = (props: { title: string; children?: any }) => (
   </html>
 );
 
-// --- Auth Middleware ---
+// --- Auth ---
+// Sessions are random tokens stored in KV (never a guessable fixed value), so
+// a client can't just set session_id themselves. Cookie is hardened and
+// HttpOnly, so browser JS can't read it either.
+const SESSION_COOKIE = "pop_session";
+const IS_PRODUCTION = !!Deno.env.get("DENO_DEPLOYMENT_ID");
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 const authMiddleware = async (c: any, next: any) => {
-  const session = getCookie(c, "session_id");
-  if (!session || session !== "demo-session") {
+  const token = getCookie(c, SESSION_COOKIE);
+  if (!token) return c.redirect("/login");
+  const session = await kv.get(["sessions", token]);
+  if (!session.value || (session.value as any).parentId !== PARENT_ID) {
     return c.redirect("/login");
   }
   await next();
 };
+
+const setSession = async (c: any) => {
+  const token = crypto.randomUUID();
+  await kv.set(["sessions", token], { parentId: PARENT_ID, createdAt: Date.now() }, {
+    expireIn: SESSION_TTL_MS,
+  });
+  setCookie(c, SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "Lax",
+    secure: IS_PRODUCTION,
+    path: "/",
+    maxAge: Math.floor(SESSION_TTL_MS / 1000),
+  });
+  return token;
+};
+
+const clearSession = async (c: any) => {
+  const token = getCookie(c, SESSION_COOKIE);
+  if (token) {
+    await kv.delete(["sessions", token]);
+    deleteCookie(c, SESSION_COOKIE, { path: "/" });
+  }
+};
+
+// --- Global error handler: never leak stack traces to clients ---
+app.onError((err, c) => {
+  if (err instanceof HTTPException) return err.getResponse();
+  console.error("Unhandled error:", err);
+  return c.json({ error: "Internal server error" }, 500);
+});
+
+// --- Security headers: applied to every response ---
+app.use("*", async (c, next) => {
+  await next();
+  c.res.headers.set("X-Content-Type-Options", "nosniff");
+  c.res.headers.set("X-Frame-Options", "DENY");
+  c.res.headers.set("Referrer-Policy", "same-origin");
+  if (IS_PRODUCTION) {
+    c.res.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+  }
+});
 
 // --- Routes ---
 
@@ -76,10 +137,15 @@ app.get("/login", (c) => {
 app.post("/login", async (c) => {
   const body = await c.req.parseBody();
   if (PASSWORD !== "" && body.password === PASSWORD) {
-    setCookie(c, "session_id", "demo-session");
+    await setSession(c);
     return c.redirect("/dashboard");
   }
   return c.redirect("/login?error=1");
+});
+
+app.post("/logout", authMiddleware, async (c) => {
+  await clearSession(c);
+  return c.redirect("/login");
 });
 
 app.get("/dashboard", authMiddleware, async (c) => {
@@ -119,10 +185,23 @@ app.get("/dashboard", authMiddleware, async (c) => {
 
 app.post("/dashboard/student", authMiddleware, async (c) => {
   const body = await c.req.parseBody();
-  const name = body.name;
+  const name = String(body.name || "").trim();
+  if (!NAME_RE.test(name)) {
+    throw new HTTPException(400, { message: "Invalid student name" });
+  }
   const parentId = PARENT_ID;
   const studentId = crypto.randomUUID();
-  const code = Math.random().toString(36).substring(2, 6).toUpperCase(); // e.g. "ABCD"
+
+  // Generate a unique 4-char link code (retry on collision).
+  let code = "";
+  for (let i = 0; i < 10; i++) {
+    const candidate = Math.random().toString(36).substring(2, 6).toUpperCase();
+    if (!(await kv.get(["link_codes", candidate])).value) {
+      code = candidate;
+      break;
+    }
+  }
+  if (!code) throw new HTTPException(500, { message: "Could not allocate a link code" });
 
   await kv.set(["students", parentId, studentId], { id: studentId, name, code, parentId });
   await kv.set(["link_codes", code], studentId);
@@ -141,12 +220,20 @@ app.get("/dashboard/student/:id", authMiddleware, async (c) => {
 
   const student = (studentRes.value as any) || { name: "Unknown Student" };
   const pData = progressRes.value || {};
+  const progressJson = JSON.stringify(pData)
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
 
   return c.html(
     <Layout title={`${student.name}'s Progress`}>
       <script src="/shared/pop.js"></script>
       <script src="/shared/parent-ui.js"></script>
-      <script dangerouslySetInnerHTML={{ __html: `window.STUDENT_PROGRESS = ${JSON.stringify(pData)};` }}>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `window.STUDENT_PROGRESS = ${progressJson};`,
+        }}
+      >
       </script>
 
       <div style="margin-bottom: 2rem;">
@@ -170,11 +257,29 @@ app.get("/dashboard/student/:id", authMiddleware, async (c) => {
 
 // --- API for Device Linking & Syncing ---
 
+// Parse a JSON request body, returning 400 (not 500) on malformed input.
+async function readJson(c: any, { maxBytes = 64 * 1024 } = {}) {
+  const body = await c.req.text();
+  if (body.length > maxBytes) {
+    throw new HTTPException(413, { message: "Payload too large" });
+  }
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new HTTPException(400, { message: "Invalid JSON body" });
+  }
+}
+
+const NAME_RE = /^[a-zA-Z0-9 _.'-]{1,60}$/;
+
 app.post("/api/link", async (c) => {
-  const { code } = await c.req.json();
+  const { code } = await readJson(c);
+  if (typeof code !== "string" || !/^[A-Z0-9]{4,6}$/.test(code)) {
+    throw new HTTPException(400, { message: "Invalid link code" });
+  }
   const studentIdRes = await kv.get(["link_codes", code.toUpperCase()]);
   if (!studentIdRes.value) {
-    return c.json({ error: "Invalid link code" }, 400);
+    throw new HTTPException(400, { message: "Invalid link code" });
   }
   return c.json({ studentId: studentIdRes.value });
 });
@@ -183,7 +288,10 @@ app.post("/api/progress", async (c) => {
   const studentId = c.req.header("X-Student-ID");
   if (!studentId) return c.json({ error: "Unlinked device" }, 400);
 
-  const body = await c.req.json();
+  const body = await readJson(c, { maxBytes: 256 * 1024 });
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    throw new HTTPException(400, { message: "Progress must be an object" });
+  }
   await kv.set(["progress", studentId], body);
   return c.json({ success: true });
 });

@@ -43,11 +43,14 @@ Once installed it opens full-screen like a normal app and works without internet
 
 ## How it's built
 
-Plain HTML, CSS, and JavaScript — no build step, no dependencies.
+The core app is plain HTML, CSS, and JavaScript — no build step, no runtime
+dependencies. The optional teacher dashboard runs on a small Deno (Hono) server
+backed by Deno KV.
 
 ```
 index.html              hub / launcher + Today's Plan
 parent.html             Grown-up Corner (progress, stickers, stage controls)
+server.tsx              optional Hono server (login, teacher dashboard, device sync)
 apps/                   one self-contained page per game
 shared/pop.css          shared design system (the "crayon box" look)
 shared/pop.js           speech, sparkle, PWA wiring, progress + activity tracking
@@ -61,12 +64,37 @@ tests/                  unit tests (deno test)
 scripts/                dev CLI tools (validate, stamp, syntax, split-audio)
 ```
 
-To run locally you just need a static file server (a service worker won't register from `file://`):
+## Running locally
+
+The **core app is fully static** — to just play the games you need nothing more
+than a static file server (a service worker won't register from `file://`):
 
 ```bash
 python3 -m http.server 8000
 # then open http://localhost:8000/
 ```
+
+For the **teacher/parent dashboard** (login + device-sync of progress) there's
+an optional Deno server backed by [Deno KV](https://deno.com/kv). To run it:
+
+```bash
+POP_PASSWORD=yourpassword deno task dev
+# then open http://localhost:8000/login
+```
+
+Set `POP_PASSWORD` to your chosen parent password (it defaults to `demo` in
+local dev only). The server also serves the static app, so use it on whatever
+port you want the whole thing on.
+
+### How progress sync works
+
+- On a device, background progress is stored in `localStorage` (fully offline).
+- Linking a device to a dashboard student uses a 4-letter **link code**
+  (`/api/link`), then the device pushes its progress to the server
+  (`/api/progress`). Sync is best-effort and re-triggers when the device comes
+  back online, so the app keeps working with no connection.
+- The dashboard is read-only for parents — progress lives on the device and is
+  mirrored server-side for the teacher view.
 
 ## Tests & checks
 
@@ -78,9 +106,9 @@ runner (the validators use `node:` built-ins, which Deno provides). No `npm`.
 ```bash
 deno task fmt        # format (deno fmt);  fmt:check verifies in CI
 deno task syntax     # every inline + shared script parses
-deno task test       # unit tests for the plan logic (deno test)
+deno task test       # unit tests for the plan logic + server API (deno test)
 deno task validate   # game-data integrity + plan/cache contract + SW-hash guard
-deno task check      # type-check the JSDoc-typed core (deno check)
+deno task check      # type-check the JSDoc-typed core + server (deno check)
 deno task all        # all of the above (what CI runs)
 ```
 

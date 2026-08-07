@@ -1,6 +1,22 @@
 import { assertEquals, assertStringIncludes } from "jsr:@std/assert";
 import app from "../server.tsx";
 
+// Log in with the dev-demo password and return a Cookie header for the
+// issued session token (a real random session, matching production flow).
+async function loginCookie(): Promise<string> {
+  const res = await app.request(
+    new Request("http://localhost/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "password=demo",
+    }),
+  );
+  const setCookie = res.headers.get("set-cookie")!;
+  const match = setCookie.match(/pop_session=([^;]+)/);
+  assertStringIncludes(setCookie, "pop_session=");
+  return `pop_session=${match![1]}`;
+}
+
 Deno.test("GET /login returns login page", async () => {
   const res = await app.request("/login");
   assertEquals(res.status, 200);
@@ -8,7 +24,7 @@ Deno.test("GET /login returns login page", async () => {
   assertStringIncludes(text, "Parent / Teacher Login");
 });
 
-Deno.test("POST /login with correct password sets cookie and redirects", async () => {
+Deno.test("POST /login with correct password sets a random session cookie and redirects", async () => {
   const req = new Request("http://localhost/login", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -17,8 +33,11 @@ Deno.test("POST /login with correct password sets cookie and redirects", async (
   const res = await app.request(req);
   assertEquals(res.status, 302);
   assertEquals(res.headers.get("location"), "/dashboard");
-  const setCookie = res.headers.get("set-cookie");
-  assertStringIncludes(setCookie!, "session_id=demo-session");
+  const setCookie = res.headers.get("set-cookie")!;
+  assertStringIncludes(setCookie, "pop_session=");
+  assertStringIncludes(setCookie, "HttpOnly");
+  const token = setCookie.match(/pop_session=([^;]+)/)![1];
+  assertEquals(token.length > 0, true);
 });
 
 Deno.test("POST /login with incorrect password redirects to error", async () => {
@@ -38,13 +57,37 @@ Deno.test("GET /dashboard redirects if not logged in", async () => {
   assertEquals(res.headers.get("location"), "/login");
 });
 
+Deno.test("GET /dashboard redirects if a forged/guessable session is used", async () => {
+  const res = await app.request(
+    new Request("http://localhost/dashboard", { headers: { "Cookie": "pop_session=demo-session" } }),
+  );
+  assertEquals(res.status, 302);
+  assertEquals(res.headers.get("location"), "/login");
+});
+
+Deno.test("POST /logout clears the session, then dashboard is protected again", async () => {
+  const cookie = await loginCookie();
+  const out = await app.request(
+    new Request("http://localhost/logout", { method: "POST", headers: { "Cookie": cookie } }),
+  );
+  assertEquals(out.status, 302);
+  assertEquals(out.headers.get("location"), "/login");
+  // Original token should now be invalid.
+  const dash = await app.request(
+    new Request("http://localhost/dashboard", { headers: { "Cookie": cookie } }),
+  );
+  assertEquals(dash.status, 302);
+});
+
 Deno.test("Dashboard integration flow: Create student -> Link -> Sync progress", async () => {
+  const cookie = await loginCookie();
+
   // 1. Create student
   const createStudentReq = new Request("http://localhost/dashboard/student", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      "Cookie": "session_id=demo-session",
+      "Cookie": cookie,
     },
     body: "name=IntegrationTestStudent",
   });
@@ -54,7 +97,7 @@ Deno.test("Dashboard integration flow: Create student -> Link -> Sync progress",
 
   // 2. Fetch dashboard to find the link code (hacky but works for integration)
   const dashReq = new Request("http://localhost/dashboard", {
-    headers: { "Cookie": "session_id=demo-session" },
+    headers: { "Cookie": cookie },
   });
   const dashRes = await app.request(dashReq);
   const dashHtml = await dashRes.text();
@@ -91,9 +134,87 @@ Deno.test("Dashboard integration flow: Create student -> Link -> Sync progress",
 
   // 5. Verify progress in dashboard
   const studentDashReq = new Request(`http://localhost/dashboard/student/${studentId}`, {
-    headers: { "Cookie": "session_id=demo-session" },
+    headers: { "Cookie": cookie },
   });
   const studentDashRes = await app.request(studentDashReq);
   const studentDashHtml = await studentDashRes.text();
   assertStringIncludes(studentDashHtml, "test-game");
+});
+
+Deno.test("POST /api/link with malformed/empty JSON returns 400 (not 500)", async () => {
+  for (const body of ["", "not-json", "[]", "42"]) {
+    const req = new Request("http://localhost/api/link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+    const res = await app.request(req);
+    assertEquals(res.status, 400);
+  }
+});
+
+Deno.test("POST /api/link rejects invalid code format", async () => {
+  const req = new Request("http://localhost/api/link", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code: "ab" }),
+  });
+  const res = await app.request(req);
+  assertEquals(res.status, 400);
+});
+
+Deno.test("POST /api/link with unknown code returns 400", async () => {
+  const req = new Request("http://localhost/api/link", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code: "ZZZZ" }),
+  });
+  const res = await app.request(req);
+  assertEquals(res.status, 400);
+});
+
+Deno.test("POST /api/progress with malformed JSON returns 400", async () => {
+  const req = new Request("http://localhost/api/progress", {
+    method: "POST",
+    headers: { "X-Student-ID": "xyz", "Content-Type": "application/json" },
+    body: "not-json",
+  });
+  const res = await app.request(req);
+  assertEquals(res.status, 400);
+});
+
+Deno.test("POST /api/progress rejects non-object payloads", async () => {
+  for (const payload of ["[1,2,3]", '"hello"', "null"]) {
+    const req = new Request("http://localhost/api/progress", {
+      method: "POST",
+      headers: { "X-Student-ID": "xyz", "Content-Type": "application/json" },
+      body: payload,
+    });
+    const res = await app.request(req);
+    assertEquals(res.status, 400);
+  }
+});
+
+Deno.test("POST /api/progress rejects oversized payloads (413)", async () => {
+  const big = JSON.stringify({ a: "x".repeat(500 * 1024) });
+  const req = new Request("http://localhost/api/progress", {
+    method: "POST",
+    headers: { "X-Student-ID": "xyz", "Content-Type": "application/json" },
+    body: big,
+  });
+  const res = await app.request(req);
+  assertEquals(res.status, 413);
+});
+
+Deno.test("POST /dashboard/student rejects invalid names", async () => {
+  const cookie = await loginCookie();
+  for (const name of ["<script>alert(1)</script>", "", "   "]) {
+    const req = new Request("http://localhost/dashboard/student", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "Cookie": cookie },
+      body: `name=${encodeURIComponent(name)}`,
+    });
+    const res = await app.request(req);
+    assertEquals(res.status, 400);
+  }
 });
