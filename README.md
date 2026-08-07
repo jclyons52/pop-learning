@@ -4,7 +4,7 @@ A little suite of bright, tappable learning games for kids who are just starting
 
 **▶️ Play it: https://jclyons52.github.io/pop-learning/**
 
-Everything runs in the browser, works **offline**, and can be **installed as an app** on a phone, tablet, or computer (no app store, no sign-up, no ads).
+Everything runs in the browser, works **offline**, and can be **installed as an app** on a phone, tablet, or computer (no app store, no ads, no sign-up to play — an optional free account lets grown-ups track progress).
 
 ## A guided daily plan
 
@@ -76,17 +76,18 @@ python3 -m http.server 8000
 # then open http://localhost:8000/
 ```
 
-For the **teacher/parent dashboard** (login + device-sync of progress) there's
-an optional Deno server backed by [Deno KV](https://deno.com/kv). To run it:
+For the **teacher/parent dashboard** (sign up, login, student device-sync of
+progress) there's an optional Deno server backed by [Deno KV](https://deno.com/kv).
+To run it:
 
 ```bash
-POP_PASSWORD=yourpassword deno task dev
-# then open http://localhost:8000/login
+deno task dev
+# then open http://localhost:8000/signup
 ```
 
-Set `POP_PASSWORD` to your chosen parent password (it defaults to `demo` in
-local dev only). The server also serves the static app, so use it on whatever
-port you want the whole thing on.
+Create an account from the sign-up page (`/signup`), then add students from the
+dashboard. The server also serves the static app, so use it on whatever port
+you want the whole thing on.
 
 ### How progress sync works
 

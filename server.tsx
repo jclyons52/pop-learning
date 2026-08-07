@@ -6,14 +6,9 @@ import { serveStatic } from "npm:hono/deno";
 import { deleteCookie, getCookie, setCookie } from "npm:hono/cookie";
 import { Fragment, jsx } from "npm:hono/jsx";
 
-const app = new Hono();
+type AppVariables = { userId: string };
+const app = new Hono<{ Variables: AppVariables }>();
 const kv = await Deno.openKv();
-
-// Read the parent password from the environment. In local dev (no env set) it
-// falls back to "demo" so things keep working; on Deno Deploy set POP_PASSWORD
-// to a real secret. The parent id likewise defaults for dev.
-const PASSWORD = Deno.env.get("POP_PASSWORD") || (Deno.env.get("DENO_DEPLOYMENT_ID") ? "" : "demo");
-const PARENT_ID = Deno.env.get("POP_PARENT_ID") || "parent-1";
 
 // Basic Layout Component
 const Layout = (props: { title: string; children?: any }) => (
@@ -31,6 +26,14 @@ const Layout = (props: { title: string; children?: any }) => (
           button:hover { filter: brightness(1.1); }
           .link-code { font-family: monospace; font-size: 1.5rem; background: #eee; padding: 0.2rem 0.5rem; border-radius: 4px; letter-spacing: 2px;}
           ul { list-style: none; padding: 0; }
+          .auth-form { display: flex; flex-direction: column; gap: 0.9rem; }
+          .auth-form label { display: flex; flex-direction: column; gap: 0.35rem; font-weight: 600; font-size: 0.9rem; color: #444; }
+          .auth-form input { padding: 0.7rem 0.85rem; font-size: 1rem; border-radius: 10px; border: 1px solid #cbd0d8; width: 100%; box-sizing: border-box; }
+          .auth-form input:focus { outline: 3px solid #a5d8ff; outline-offset: 0; border-color: #4dabf7; }
+          .auth-form button { margin: 0; padding: 0.8rem 1rem; border-radius: 10px; width: 100%; font-size: 1.05rem; }
+          .auth-sub { color: #666; margin-top: 0; }
+          .auth-alt { margin: 1.2rem 0 0; text-align: center; font-size: 0.92rem; color: #555; }
+          .auth-alt a { color: var(--c2, #4dabf7); font-weight: 700; }
         `}
       </style>
     </head>
@@ -63,20 +66,75 @@ const Layout = (props: { title: string; children?: any }) => (
 const SESSION_COOKIE = "pop_session";
 const IS_PRODUCTION = !!Deno.env.get("DENO_DEPLOYMENT_ID");
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const PBKDF2_ITERATIONS = 100_000;
+
+const te = new TextEncoder();
+
+// --- Password hashing (WebCrypto PBKDF2; no external deps) ---
+async function hashPassword(password: string, salt: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    te.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: te.encode(salt), iterations: PBKDF2_ITERATIONS, hash: "SHA-256" },
+    key,
+    256,
+  );
+  return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function randomSalt(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Constant-time string compare to avoid timing side-channels.
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+// --- User + session helpers ---
+type User = {
+  userId: string;
+  email: string;
+  displayName: string;
+  passwordHash: string;
+  salt: string;
+  createdAt: number;
+};
+
+async function userById(userId: string): Promise<User | null> {
+  return (await kv.get<User>(["users", userId])).value || null;
+}
+
+async function userByEmail(email: string): Promise<User | null> {
+  const userId = (await kv.get<string>(["users_by_email", email])).value;
+  if (!userId) return null;
+  return userById(userId);
+}
 
 const authMiddleware = async (c: any, next: any) => {
   const token = getCookie(c, SESSION_COOKIE);
   if (!token) return c.redirect("/login");
-  const session = await kv.get(["sessions", token]);
-  if (!session.value || (session.value as any).parentId !== PARENT_ID) {
+  const session = await kv.get<{ userId: string }>(["sessions", token]);
+  if (!session.value || !(await userById(session.value.userId))) {
     return c.redirect("/login");
   }
+  c.set("userId", session.value.userId);
   await next();
 };
 
-const setSession = async (c: any) => {
+const setSession = async (c: any, userId: string) => {
   const token = crypto.randomUUID();
-  await kv.set(["sessions", token], { parentId: PARENT_ID, createdAt: Date.now() }, {
+  await kv.set(["sessions", token], { userId, createdAt: Date.now() }, {
     expireIn: SESSION_TTL_MS,
   });
   setCookie(c, SESSION_COOKIE, token, {
@@ -117,30 +175,142 @@ app.use("*", async (c, next) => {
 
 // --- Routes ---
 
+// --- Auth pages ---
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const AuthLayout = (props: { title: string; error?: boolean; children?: any }) => (
+  <Layout title={props.title}>
+    <div class="dashboard-card" style="max-width:460px; margin:0 auto;">
+      {props.error
+        ? (
+          <p style="color:#c00; font-weight:600;">
+            That didn't work — please check your details and try again.
+          </p>
+        )
+        : null}
+      {props.children}
+    </div>
+  </Layout>
+);
+
 app.get("/login", (c) => {
+  const error = c.req.query("error");
   return c.html(
-    <Layout title="Login">
-      <div class="dashboard-card">
-        <h2>Parent / Teacher Login</h2>
-        {PASSWORD === ""
-          ? <p style="color: #c00;">No POP_PASSWORD env var set — login disabled.</p>
-          : <p>Enter the parent password to continue.</p>}
-        <form method="post" action="/login">
-          <input type="password" name="password" placeholder="Password" />
-          <button type="submit">Login</button>
-        </form>
-      </div>
-    </Layout>,
+    <AuthLayout title="Login" error={!!error}>
+      <h2>Parent / Teacher Login</h2>
+      <form method="post" action="/login" class="auth-form">
+        <label>
+          Email<input type="email" name="email" placeholder="you@school.edu" required autocomplete="email" />
+        </label>
+        <label>
+          Password<input
+            type="password"
+            name="password"
+            placeholder="Your password"
+            required
+            autocomplete="current-password"
+          />
+        </label>
+        <button type="submit">Log in</button>
+      </form>
+      <p class="auth-alt">
+        New here? <a href="/signup">Create an account</a>
+      </p>
+    </AuthLayout>,
   );
 });
 
 app.post("/login", async (c) => {
   const body = await c.req.parseBody();
-  if (PASSWORD !== "" && body.password === PASSWORD) {
-    await setSession(c);
-    return c.redirect("/dashboard");
-  }
-  return c.redirect("/login?error=1");
+  const email = String(body.email || "").trim().toLowerCase();
+  const password = String(body.password || "");
+  const user = await userByEmail(email);
+  if (!user) return c.redirect("/login?error=1");
+  const hash = await hashPassword(password, user.salt);
+  if (!safeEqual(hash, user.passwordHash)) return c.redirect("/login?error=1");
+  await setSession(c, user.userId);
+  return c.redirect("/dashboard");
+});
+
+app.get("/signup", (c) => {
+  const error = c.req.query("error");
+  return c.html(
+    <AuthLayout title="Sign up" error={!!error}>
+      <h2>Create an account</h2>
+      <p class="auth-sub">Track your child's or class's progress across devices.</p>
+      <form method="post" action="/signup" class="auth-form">
+        <label>
+          Your name<input
+            type="text"
+            name="displayName"
+            placeholder="e.g. Sam Jones"
+            required
+            maxlength="60"
+            autocomplete="name"
+          />
+        </label>
+        <label>
+          Email<input type="email" name="email" placeholder="you@school.edu" required autocomplete="email" />
+        </label>
+        <label>
+          Password<input
+            type="password"
+            name="password"
+            placeholder="At least 8 characters"
+            required
+            minlength="8"
+            autocomplete="new-password"
+          />
+        </label>
+        <label>
+          Confirm password<input
+            type="password"
+            name="confirm"
+            placeholder="Repeat password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+          />
+        </label>
+        <button type="submit">Create account</button>
+      </form>
+      <p class="auth-alt">
+        Already have an account? <a href="/login">Log in</a>
+      </p>
+    </AuthLayout>,
+  );
+});
+
+app.post("/signup", async (c) => {
+  const body = await c.req.parseBody();
+  const displayName = String(body.displayName || "").trim();
+  const email = String(body.email || "").trim().toLowerCase();
+  const password = String(body.password || "");
+  const confirm = String(body.confirm || "");
+
+  if (!displayName) return c.redirect("/signup?error=1");
+  if (!EMAIL_RE.test(email) || email.length > 120) return c.redirect("/signup?error=1");
+  if (password.length < 8 || password.length > 200) return c.redirect("/signup?error=1");
+  if (password !== confirm) return c.redirect("/signup?error=1");
+
+  if (await userByEmail(email)) return c.redirect("/signup?error=1");
+
+  const userId = crypto.randomUUID();
+  const salt = randomSalt();
+  const passwordHash = await hashPassword(password, salt);
+  const user: User = { userId, email, displayName, salt, passwordHash, createdAt: Date.now() };
+
+  // Guard against a race where two sign-ups use the same email (atomic check).
+  const emailRes = await kv
+    .atomic()
+    .check({ key: ["users_by_email", email], versionstamp: null })
+    .set(["users_by_email", email], userId)
+    .commit();
+  if (!emailRes.ok) return c.redirect("/signup?error=1");
+  await kv.set(["users", userId], user);
+
+  await setSession(c, userId);
+  return c.redirect("/dashboard");
 });
 
 app.post("/logout", authMiddleware, async (c) => {
@@ -149,9 +319,8 @@ app.post("/logout", authMiddleware, async (c) => {
 });
 
 app.get("/dashboard", authMiddleware, async (c) => {
-  // Fetch students for the demo parent
-  const parentId = PARENT_ID;
-  const studentsIter = kv.list({ prefix: ["students", parentId] });
+  const userId = c.get("userId");
+  const studentsIter = kv.list({ prefix: ["students", userId] });
   const students: any[] = [];
   for await (const res of studentsIter) students.push(res);
 
@@ -189,7 +358,7 @@ app.post("/dashboard/student", authMiddleware, async (c) => {
   if (!NAME_RE.test(name)) {
     throw new HTTPException(400, { message: "Invalid student name" });
   }
-  const parentId = PARENT_ID;
+  const parentId = c.get("userId");
   const studentId = crypto.randomUUID();
 
   // Generate a unique 4-char link code (retry on collision).
@@ -211,14 +380,15 @@ app.post("/dashboard/student", authMiddleware, async (c) => {
 
 app.get("/dashboard/student/:id", authMiddleware, async (c) => {
   const studentId = c.req.param("id");
-  const parentId = PARENT_ID;
+  const parentId = c.get("userId");
 
   const [studentRes, progressRes] = await Promise.all([
     kv.get(["students", parentId, studentId]),
     kv.get(["progress", studentId]),
   ]);
 
-  const student = (studentRes.value as any) || { name: "Unknown Student" };
+  const student = studentRes.value as any;
+  if (!student) throw new HTTPException(404, { message: "Student not found" });
   const pData = progressRes.value || {};
   const progressJson = JSON.stringify(pData)
     .replace(/</g, "\\u003c")
