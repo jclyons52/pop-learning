@@ -54,6 +54,8 @@ server.tsx              optional Hono server (login, teacher dashboard, device s
 apps/                   one self-contained page per game
 shared/pop.css          shared design system (the "crayon box" look)
 shared/pop.js           speech, sparkle, PWA wiring, progress + activity tracking
+shared/qrcode.js        vendored QR generator (MIT, offline)
+shared/share.js         share / QR-code modal (Pop.showShareQR)
 shared/data.js          all word / phonics / number content (Pop.data)
 shared/plan.js          the daily-plan engine (curriculum, mastery, streak)
 sounds/                 recorded phoneme clips + manifest (RECORDING.md)

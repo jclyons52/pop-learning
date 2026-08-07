@@ -2,11 +2,11 @@
    Precaches the whole suite so it runs offline once installed. */
 "use strict";
 
-var VERSION = "pop-v8";
+var VERSION = "pop-v9";
 // ASSETS_HASH is a digest of every precached file, written by `deno task stamp`.
 // Because the cache name includes it, the cache busts automatically whenever
 // any asset changes — CI fails if this is stale (see tests/validate.js).
-var ASSETS_HASH = "d065386d69";
+var ASSETS_HASH = "f482a87472";
 var CACHE = "pop-cache-" + VERSION + "-" + ASSETS_HASH;
 
 // All paths are relative to this script (the repo root).
@@ -17,6 +17,8 @@ var PRECACHE = [
   "manifest.webmanifest",
   "shared/pop.css",
   "shared/pop.js",
+  "shared/qrcode.js",
+  "shared/share.js",
   "shared/data.js",
   "shared/plan-core.js",
   "shared/plan.js",

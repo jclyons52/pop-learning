@@ -84,6 +84,8 @@ slugsOnDisk.forEach((slug) => {
   "manifest.webmanifest",
   "shared/pop.css",
   "shared/pop.js",
+  "shared/qrcode.js",
+  "shared/share.js",
   "shared/data.js",
   "shared/plan-core.js",
   "shared/plan.js",

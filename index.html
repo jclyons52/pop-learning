@@ -92,11 +92,69 @@
   .install{ display:none; }
   .ios-hint{ font-size:.85rem; max-width:30rem; margin:0 auto; line-height:1.35; }
   .credit{ font-size:.8rem; margin-top:10px; }
+
+  /* ---------- top bar + hamburger menu ---------- */
+  .topbar{
+    position: sticky; top:0; z-index:60;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+  }
+  .brand{ font-weight:800; font-size:1.15rem; letter-spacing:.4px; color:var(--ink); text-decoration:none; }
+  .brand span{ color:var(--pop); }
+  .hamburger{
+    border:none; cursor:pointer; background:rgba(255,255,255,.85);
+    width:46px; height:46px; border-radius:14px; box-shadow:0 3px 0 var(--shadow);
+    display:grid; place-items:center; font-size:1.5rem; line-height:1; color:var(--ink);
+  }
+  .hamburger .bar{ display:flex; flex-direction:column; gap:5px; }
+  .hamburger .bar i{ display:block; width:22px; height:3px; border-radius:3px; background:var(--ink); }
+
+  .menu-backdrop{ position:fixed; inset:0; z-index:90; background:rgba(43,36,64,.4); }
+  .menu-panel{
+    position:fixed; top:0; right:0; bottom:0; z-index:95; width:min(78vw, 300px);
+    background:var(--paper); color:var(--ink);
+    border-radius:0 0 0 26px; box-shadow:-8px 0 40px rgba(43,36,64,.28);
+    padding:calc(20px + env(safe-area-inset-top)) 18px 20px;
+    display:flex; flex-direction:column; gap:6px;
+    transform:translateX(0); animation:menuIn .2s ease;
+  }
+  @keyframes menuIn{ from{ transform:translateX(40px); opacity:.5; } to{ transform:none; opacity:1; } }
+  .menu-close{
+    align-self:flex-end; border:none; cursor:pointer; background:none;
+    font-size:1.6rem; line-height:1; color:var(--ink-soft);
+  }
+  .menu-title{ font-size:.78rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft); margin:4px 2px 6px; }
+  .menu-item{
+    display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--ink);
+    background:#fff; border-radius:16px; padding:13px 14px; font-weight:700; font-size:.98rem;
+    box-shadow:0 2px 0 var(--shadow); border:none; cursor:pointer; text-align:left; font-family:var(--font);
+  }
+  .menu-item .mi-ico{ font-size:1.3rem; }
+  .menu-item:active{ transform:translateY(2px); box-shadow:0 0 0 var(--shadow); }
+  .menu-note{ font-size:.78rem; color:var(--ink-soft); margin-top:auto; line-height:1.35; }
 </style>
 </head>
 <body>
+  <div class="topbar">
+    <a class="brand" href="index.html">Pop&nbsp;<span>Learning</span></a>
+    <button class="hamburger" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="menuPanel">
+      <span class="bar"><i></i><i></i><i></i></span>
+    </button>
+  </div>
+
+  <div class="menu-backdrop" id="menuBackdrop" hidden></div>
+  <nav class="menu-panel" id="menuPanel" hidden aria-label="Menu">
+    <button class="menu-close" id="menuClose" aria-label="Close menu">✕</button>
+    <div class="menu-title">Explore</div>
+    <a class="menu-item" href="index.html"><span class="mi-ico">🏠</span> Home</a>
+    <a class="menu-item" href="parent.html"><span class="mi-ico">👩‍👧</span> Grown-up Corner</a>
+    <button class="menu-item" id="menuShare"><span class="mi-ico">📱</span> Share &amp; QR code</button>
+    <div class="menu-title">For grown-ups</div>
+    <a class="menu-item" href="login"><span class="mi-ico">🔐</span> Teacher / Parent login</a>
+    <p class="menu-note">Works offline · no ads · no sign-up. Made with ❤️ for little learners.</p>
+  </nav>
+
   <header class="hero">
-    <h1>Pop&nbsp;<span>Learning</span></h1>
     <p>Tap, listen, learn — little games for early readers 🦉</p>
   </header>
 
@@ -127,11 +185,36 @@
   </footer>
 
 <script src="shared/pop.js"></script>
+<script src="shared/qrcode.js"></script>
+<script src="shared/share.js"></script>
 <script src="shared/plan-core.js"></script>
 <script src="shared/plan.js"></script>
 <script>
 (function(){
   "use strict";
+
+  /* ----- hamburger menu ----- */
+  (function initMenu(){
+    var btn = Pop.$("menuBtn"), panel = Pop.$("menuPanel"), backdrop = Pop.$("menuBackdrop"), closeBtn = Pop.$("menuClose");
+    function open(){
+      panel.hidden = false; backdrop.hidden = false;
+      btn.setAttribute("aria-expanded", "true");
+      closeBtn.focus();
+    }
+    function close(){
+      panel.hidden = true; backdrop.hidden = true;
+      btn.setAttribute("aria-expanded", "false");
+    }
+    function toggle(){ (panel.hidden ? open : close)(); }
+    btn.addEventListener("click", toggle);
+    closeBtn.addEventListener("click", close);
+    backdrop.addEventListener("click", close);
+    document.addEventListener("keydown", function(e){ if(e.key === "Escape") close(); });
+    Pop.$("menuShare").addEventListener("click", function(){
+      close();
+      setTimeout(function(){ if(Pop.showShareQR) Pop.showShareQR(); }, 220);
+    });
+  })();
 
   /* ----- Today's Plan ----- */
   (function renderPlan(){

@@ -13,7 +13,7 @@
     "all": "deno task fmt:check && deno task syntax && deno task validate && deno task test && deno task check"
   },
   "fmt": {
-    "exclude": ["icons", "**/*.html"],
+    "exclude": ["icons", "**/*.html", "shared/qrcode.js"],
     "lineWidth": 110,
     "proseWrap": "preserve"
   },

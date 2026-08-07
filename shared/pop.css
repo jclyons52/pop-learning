@@ -469,6 +469,43 @@ body {
   box-shadow: 0 0 0 rgba(0, 0, 0, 0.25);
 }
 
+/* ---------- share/QR modal ---------- */
+.pop-share-modal {
+  align-items: center;
+  text-align: center;
+}
+.pop-share-modal .qr-box {
+  margin: 4px auto;
+  padding: 12px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  line-height: 0;
+}
+.pop-share-modal .qr-box svg {
+  width: min(70vw, 240px);
+  height: auto;
+}
+.pop-share-modal .pop-modal-link {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+  word-break: break-all;
+  margin: 4px 6px 8px;
+}
+.pop-share-modal .qr-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.pop-share-modal .qr-actions .pop-modal-done {
+  flex: 1;
+}
+.pop-share-modal .pop-modal-secondary {
+  background: var(--ink-soft);
+  opacity: 0.9;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
