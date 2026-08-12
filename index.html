@@ -118,6 +118,8 @@
     display:flex; flex-direction:column; gap:6px;
     transform:translateX(0); animation:menuIn .2s ease;
   }
+  /* display:flex above would override the [hidden] attribute, so hide explicitly */
+  .menu-panel[hidden], .menu-backdrop[hidden]{ display:none; }
   @keyframes menuIn{ from{ transform:translateX(40px); opacity:.5; } to{ transform:none; opacity:1; } }
   .menu-close{
     align-self:flex-end; border:none; cursor:pointer; background:none;

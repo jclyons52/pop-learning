@@ -2,11 +2,11 @@
    Precaches the whole suite so it runs offline once installed. */
 "use strict";
 
-var VERSION = "pop-v10";
+var VERSION = "pop-v11";
 // ASSETS_HASH is a digest of every precached file, written by `deno task stamp`.
 // Because the cache name includes it, the cache busts automatically whenever
 // any asset changes — CI fails if this is stale (see tests/validate.js).
-var ASSETS_HASH = "78c0cfea71";
+var ASSETS_HASH = "620e394cc1";
 var CACHE = "pop-cache-" + VERSION + "-" + ASSETS_HASH;
 
 // All paths are relative to this script (the repo root).
